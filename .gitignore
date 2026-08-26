@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+
+# a configuracao desta maquina (caminhos das pastas, tema escolhido)
+# mora em %LOCALAPPDATA%\CR2\central, nunca aqui.

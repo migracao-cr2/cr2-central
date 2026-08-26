@@ -1,0 +1,17 @@
+# --------------------------------------------------------------------------
+# Fim de linha por tipo de arquivo
+#
+# A linha do .bat NÃO é detalhe: arquivo .bat com fim de linha LF simplesmente
+# NÃO RODA no cmd.exe do Windows ("'/d' não é reconhecido como um comando").
+# Sem esta regra, clonar o repositório em outra máquina podia entregar os .bat
+# quebrados, e o programa não abriria.
+# --------------------------------------------------------------------------
+* text=auto eol=lf
+*.bat text eol=crlf
+
+# binários: o git não deve mexer
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
+*.traineddata binary
