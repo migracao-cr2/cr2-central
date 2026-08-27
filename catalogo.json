@@ -19,6 +19,14 @@
       "tipo": "janela"
     },
     {
+      "id": "envio-pdfs-email",
+      "nome": "Envio de PDFs por E-mail",
+      "descricao": "Padroniza os nomes dos PDFs no padrão Tipo Nnn-aaaa-Sigla (pelo nome do arquivo, pelo texto ou por OCR) e envia tudo para o e-mail da migração em lotes que nunca estouram o limite do Gmail, com a label do colaborador.",
+      "repo": "https://github.com/migracao-cr2/envio-pdfs-email.git",
+      "entrada": "Enviar PDFs.bat",
+      "tipo": "janela"
+    },
+    {
       "id": "migrador-acervo-noticias",
       "nome": "Migrador de Acervo de Notícias",
       "descricao": "Lê o backup de um site antigo e migra o acervo de notícias para o WordPress novo, com as mídias e as categorias.",
