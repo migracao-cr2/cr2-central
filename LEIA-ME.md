@@ -63,12 +63,36 @@ aceitar.
 
 1. Instale o [Python](https://www.python.org/downloads/) marcando
    **"Add python.exe to PATH"** e **"tcl/tk and IDLE"**.
-2. Instale o [Git para Windows](https://git-scm.com/download/win).
-3. Baixe a Central e dê dois cliques em `central.bat`.
+2. Instale o [Git para Windows](https://git-scm.com/download/win). Ele já vem
+   com o Credential Manager configurado — não há nada para ajustar.
+3. Clone a Central e dê dois cliques em `central.bat`:
 
-Na primeira instalação de uma automação, o Windows abre uma janela pedindo o
-login do GitHub (os repositórios são privados). É uma vez só: o Credential
-Manager guarda daí em diante. **Nenhuma senha fica escrita em arquivo.**
+```
+git clone https://github.com/migracao-cr2/cr2-central.git
+```
+
+**Este repositório é público, então o passo 3 não pede login nenhum.** As
+automações do catálogo é que são privadas: na primeira vez que você clicar em
+**Instalar**, o Credential Manager abre uma janela pedindo o login do GitHub.
+É uma vez por máquina — daí em diante ele guarda. **Nenhuma senha fica escrita
+em arquivo.**
+
+Se essa janela não aparecer e o cartão disser *"O GitHub recusou o acesso"*,
+faça o login por fora uma vez, num terminal, e volte para a Central — o
+terminal consegue pedir o login em situações em que a janela não aparece:
+
+```
+git ls-remote https://github.com/migracao-cr2/gestor-licitacoes.git
+```
+
+> **Clone, não ZIP.** Baixar o `.zip` do GitHub, ou receber a pasta por pen
+> drive, entrega uma pasta que **não é um clone do git**: a Central abre e
+> abre as automações, mas não consegue se atualizar nem receber automações
+> novas do catálogo. Ela avisa quando é esse o caso.
+
+Quem não trabalha na CR2 consegue clonar e abrir a Central, mas os cartões
+não instalam: os repositórios das automações continuam privados e o GitHub
+responde *"Repositório não encontrado"*.
 
 ## Acrescentar uma automação ao catálogo
 
