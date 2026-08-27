@@ -61,29 +61,28 @@ aceitar.
 
 ## Numa máquina nova
 
+**Dois cliques em `INSTALAR.bat`.** Ele confere o que falta, instala pelo
+`winget` (que já vem no Windows), baixa a Central, põe o atalho *Central CR2*
+na área de trabalho e abre a janela. Rodar de novo não estraga nada: quando a
+Central já está instalada, ele só atualiza e abre.
+
+Se preferir fazer à mão, são três passos:
+
 1. Instale o [Python](https://www.python.org/downloads/) marcando
-   **"Add python.exe to PATH"** e **"tcl/tk and IDLE"**.
-2. Instale o [Git para Windows](https://git-scm.com/download/win). Ele já vem
-   com o Credential Manager configurado — não há nada para ajustar.
+   **"Add python.exe to PATH"** e **"tcl/tk and IDLE"** — as duas vêm
+   desmarcadas, e sem elas nada funciona.
+2. Instale o [Git para Windows](https://git-scm.com/download/win).
 3. Clone a Central e dê dois cliques em `central.bat`:
 
 ```
 git clone https://github.com/migracao-cr2/cr2-central.git
 ```
 
-**Este repositório é público, então o passo 3 não pede login nenhum.** As
-automações do catálogo é que são privadas: na primeira vez que você clicar em
-**Instalar**, o Credential Manager abre uma janela pedindo o login do GitHub.
-É uma vez por máquina — daí em diante ele guarda. **Nenhuma senha fica escrita
-em arquivo.**
-
-Se essa janela não aparecer e o cartão disser *"O GitHub recusou o acesso"*,
-faça o login por fora uma vez, num terminal, e volte para a Central — o
-terminal consegue pedir o login em situações em que a janela não aparece:
-
-```
-git ls-remote https://github.com/migracao-cr2/gestor-licitacoes.git
-```
+**Este repositório é público, então o clone não pede login nenhum.** As
+automações do catálogo é que são privadas: o `INSTALAR.bat` faz esse login no
+fim, e ele é uma vez por máquina. Se você instalou à mão, a janela do login
+aparece no primeiro clique em **Instalar**. **Nenhuma senha fica escrita em
+arquivo** — quem guarda é o Credential Manager do Windows.
 
 > **Clone, não ZIP.** Baixar o `.zip` do GitHub, ou receber a pasta por pen
 > drive, entrega uma pasta que **não é um clone do git**: a Central abre e
@@ -93,6 +92,25 @@ git ls-remote https://github.com/migracao-cr2/gestor-licitacoes.git
 Quem não trabalha na CR2 consegue clonar e abrir a Central, mas os cartões
 não instalam: os repositórios das automações continuam privados e o GitHub
 responde *"Repositório não encontrado"*.
+
+### O que o INSTALAR.bat resolve que não é óbvio
+
+- **`PrependPath=1` não é opcional.** A Central sobreviveria sem o Python no
+  PATH, porque o `central.bat` procura o launcher `py` primeiro e o `py` fica
+  numa pasta que está sempre no PATH. Mas os `.bat` das automações chamam
+  `python` puro — inclusive o `python -m pip install` que instala as
+  dependências delas. Sem PATH, a Central abriria bonita e **nenhuma
+  automação rodaria**. O `winget install` silencioso não marca isso sozinho.
+- **O PATH da janela aberta é o antigo.** O `cmd` lê o PATH uma vez, ao abrir.
+  Depois de instalar algo, o instalador procura nos lugares de sempre; se não
+  achar, pede para fechar e rodar de novo, em vez de dizer que falhou.
+- **O login no lugar certo.** O `git ls-remote` do fim faz o login do GitHub
+  num console de verdade. Se ele acontecesse no primeiro **Instalar**, seria
+  dentro da Central, que roda o git com `CREATE_NO_WINDOW` — e um pedido de
+  senha invisível pareceria uma janela travada.
+- **A área de trabalho não é `%USERPROFILE%\Desktop`.** Com o OneDrive ligado
+  ela é redirecionada, e o atalho iria para uma pasta que ninguém vê. O
+  caminho sai do PowerShell.
 
 ## Acrescentar uma automação ao catálogo
 
@@ -120,6 +138,7 @@ Uma entrada em `catalogo.json` e um push. Só isso.
 ## Como está organizado
 
 ```
+INSTALAR.bat       instala tudo numa maquina nova
 central.bat        abre a janela
 catalogo.json      QUAIS automações existem (vem do GitHub, é versionado)
 src/app.py         a janela: cartões, menus, thread de trabalho
