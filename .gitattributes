@@ -7,7 +7,19 @@
 # quebrados, e o programa não abriria.
 # --------------------------------------------------------------------------
 * text=auto eol=lf
-*.bat text eol=crlf
+
+# `-text` e nao `text eol=crlf`, e a diferenca importa:
+#
+#   text eol=crlf  guarda LF no indice e converte para CRLF no checkout.
+#                  Funciona para quem CLONA - e so para quem clona.
+#   -text          nao converte nada: os bytes commitados sao os bytes
+#                  guardados e os bytes entregues, sempre CRLF.
+#
+# O INSTALAR.bat e baixado direto de raw.githubusercontent.com por quem
+# ainda nao tem git na maquina. O raw serve o blob do INDICE, sem passar
+# pela conversao de checkout - com `text eol=crlf` ele entregava um .bat
+# com LF justamente para quem mais depende dele funcionar.
+*.bat -text
 
 # binários: o git não deve mexer
 *.png binary
