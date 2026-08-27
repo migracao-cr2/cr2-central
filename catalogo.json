@@ -19,6 +19,14 @@
       "tipo": "janela"
     },
     {
+      "id": "coletor-tcm-pa",
+      "nome": "Licitações e Contratos — TCM-PA",
+      "descricao": "Baixa as licitações e os contratos de qualquer município do Pará direto do Portal da Transparência do TCM-PA, separa prefeitura e câmara, organiza as pastas no padrão do Gestor V4 e gera as planilhas do Front.",
+      "repo": "https://github.com/migracao-cr2/coletor-tcm-pa.git",
+      "entrada": "EXECUTAR.bat",
+      "tipo": "janela"
+    },
+    {
       "id": "envio-pdfs-email",
       "nome": "Envio de PDFs por E-mail",
       "descricao": "Padroniza os nomes dos PDFs no padrão Tipo Nnn-aaaa-Sigla (pelo nome do arquivo, pelo texto ou por OCR) e envia tudo para o e-mail da migração em lotes que nunca estouram o limite do Gmail, com a label do colaborador.",
