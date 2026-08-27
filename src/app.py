@@ -196,6 +196,9 @@ class Central(tk.Tk):
         self.apps = []
         self.retrato_central = {}
         self.erro_catalogo = ""
+        # lido uma vez aqui: é leitura de arquivo local, não de rede, e o
+        # menu da Central precisa dele para abrir o repositório no navegador.
+        self.url_central = repos.endereco_origem(cat.pasta_da_central())
 
         try:
             self.apps = cat.carregar_catalogo()
@@ -296,6 +299,12 @@ class Central(tk.Tk):
                                         width=16,
                                         command=self.verificar_tudo)
         self.btn_verificar.pack(side="right", padx=(0, 8))
+        # A faixa do topo só acende quando existe versão nova da Central.
+        # Este botão está sempre aqui: atualizar a própria Central não pode
+        # depender de a faixa ter aparecido.
+        self.btn_central = ttk.Button(faixa, text="A Central  ▾", width=14,
+                                      command=self.menu_da_central)
+        self.btn_central.pack(side="right", padx=(0, 8))
 
     def _montar_faixa_central(self):
         """Aviso do topo. Fica escondido enquanto não há o que dizer."""
@@ -309,7 +318,10 @@ class Central(tk.Tk):
     def _mostrar_faixa(self, texto, rotulo_botao=None, comando=None):
         self.faixa_texto.configure(text=texto)
         if rotulo_botao and comando:
+            # o !disabled importa: quem clicou em "Atualizar a Central" deixou
+            # este botão desligado, e sem isto ele nunca mais voltaria.
             self.faixa_botao.configure(text=rotulo_botao, command=comando)
+            self.faixa_botao.state(["!disabled"])
             self.faixa_botao.pack(side="right", padx=(8, 0))
         else:
             self.faixa_botao.pack_forget()
@@ -491,8 +503,9 @@ class Central(tk.Tk):
                        activeforeground=c["selecao_texto"],
                        borderwidth=1, relief="solid")
         if cartao.retrato.get("novidades"):
-            menu.add_command(label="Ver o que mudou",
-                             command=lambda: self.ver_novidades(cartao))
+            menu.add_command(
+                label="Ver o que mudou",
+                command=lambda: self.ver_novidades(app.nome, cartao.retrato))
             menu.add_separator()
         menu.add_command(label="Abrir a pasta no Explorer",
                          command=lambda: self.abrir_pasta(pasta),
@@ -512,9 +525,9 @@ class Central(tk.Tk):
         finally:
             menu.grab_release()
 
-    def ver_novidades(self, cartao):
+    def ver_novidades(self, nome, retrato):
         janela = tk.Toplevel(self)
-        janela.title("O que mudou — %s" % cartao.app.nome)
+        janela.title("O que mudou — %s" % nome)
         janela.geometry("640x420")
         janela.transient(self)
         moldura = ttk.Frame(janela, padding=12)
@@ -525,10 +538,10 @@ class Central(tk.Tk):
                            anchor="w", pady=(0, 8))
         texto = tk.Text(moldura, wrap="word", height=16, borderwidth=1)
         texto.pack(fill="both", expand=True)
-        for linha in cartao.retrato.get("novidades", []):
+        for linha in retrato.get("novidades", []):
             texto.insert("end", "\u2022  %s\n" % linha)
-        restantes = cartao.retrato.get("atrasado", 0) - len(
-            cartao.retrato.get("novidades", []))
+        restantes = retrato.get("atrasado", 0) - len(
+            retrato.get("novidades", []))
         if restantes > 0:
             texto.insert("end", "\n... e mais %d.\n" % restantes)
         texto.configure(state="disabled")
@@ -570,7 +583,59 @@ class Central(tk.Tk):
         self._enfileirar("olhar", app, texto="verificando...")
 
     # ------------------------------------------------------------- Central
-    def _mostrar_estado_central(self, retrato):
+    def menu_da_central(self):
+        """Tudo sobre a própria Central — inclusive atualizá-la.
+
+        A faixa do topo só acende quando existe versão nova. Este menu está
+        sempre disponível: conferir ou forçar a atualização da Central não
+        pode depender de a faixa ter aparecido.
+        """
+        retrato = self.retrato_central
+        c = self.tema.cor
+        menu = tk.Menu(self, tearoff=0, background=c["superficie"],
+                       foreground=c["texto"],
+                       activebackground=c["selecao"],
+                       activeforeground=c["selecao_texto"],
+                       borderwidth=1, relief="solid")
+        if retrato.get("versao"):
+            menu.add_command(label="Versão instalada:  %s"
+                                   % retrato["versao"], state="disabled")
+            menu.add_separator()
+        menu.add_command(label="Verificar se há versão nova",
+                         command=self.verificar_central)
+        menu.add_command(label="Atualizar a Central",
+                         command=self.atualizar_central)
+        if retrato.get("novidades"):
+            menu.add_command(
+                label="Ver o que mudou",
+                command=lambda: self.ver_novidades("a Central", retrato))
+        menu.add_separator()
+        menu.add_command(
+            label="Abrir a pasta da Central no Explorer",
+            command=lambda: self.abrir_pasta(cat.pasta_da_central()))
+        menu.add_command(label="Ver no GitHub",
+                         command=self.central_no_github,
+                         state=("normal" if self.url_central else "disabled"))
+        try:
+            menu.tk_popup(self.btn_central.winfo_rootx(),
+                          self.btn_central.winfo_rooty() + 30)
+        finally:
+            menu.grab_release()
+
+    def central_no_github(self):
+        url = self.url_central
+        if url.endswith(".git"):
+            url = url[:-4]
+        if url:
+            webbrowser.open(url)
+
+    def _mostrar_estado_central(self, retrato, avisar=False):
+        """Acende (ou apaga) a faixa do topo.
+
+        `avisar` é verdadeiro quando a pessoa pediu a verificação pelo menu:
+        aí o resultado precisa aparecer mesmo quando não há nada de novo —
+        senão o clique parece não ter feito nada.
+        """
         self.retrato_central = retrato or {}
         atrasado = self.retrato_central.get("atrasado", 0)
         if atrasado:
@@ -580,12 +645,63 @@ class Central(tk.Tk):
                 % (atrasado, "atualização" if atrasado == 1
                    else "atualizações"),
                 "Atualizar a Central", self.atualizar_central)
+            if avisar:
+                self._status("A Central tem versão nova — o aviso está no "
+                             "alto da janela.")
+            return
+        self._esconder_faixa()
+        if not avisar:
+            return
+        if self.retrato_central.get("erro"):
+            self._status("A Central não pôde ser verificada: %s"
+                         % self.retrato_central["erro"].split("\n")[0])
+        elif not self.retrato_central.get("instalado"):
+            self._avisar_central_sem_git()
         else:
-            self._esconder_faixa()
+            self._status("A Central já está na versão mais nova.")
+
+    def verificar_central(self):
+        if not repos.disponivel():
+            self._avisar_sem_git()
+            return
+        if not repos.e_repo(cat.pasta_da_central()):
+            self._avisar_central_sem_git()
+            return
+        self._status("Perguntando ao GitHub se a Central tem versão nova...")
+        self._enfileirar_central("buscar", avisar=True)
 
     def atualizar_central(self):
+        if not repos.disponivel():
+            self._avisar_sem_git()
+            return
+        if not repos.e_repo(cat.pasta_da_central()):
+            self._avisar_central_sem_git()
+            return
+        # mesma conversa dos cartões: se há arquivo mexido na pasta da
+        # Central (um catalogo.json editado à mão, por exemplo), o git
+        # recusaria o pull — então a Central oferece guardar antes.
+        guardar = False
+        if self.retrato_central.get("sujo"):
+            if not messagebox.askyesno(
+                    TITULO,
+                    "Há arquivos alterados dentro da pasta da Central.\n\n"
+                    "Ela pode guardá-los antes de atualizar (git stash) e "
+                    "eles continuam recuperáveis depois.\n\nGuardar e "
+                    "atualizar?"):
+                return
+            guardar = True
         self.faixa_botao.state(["disabled"])
-        self._enfileirar_central("atualizar")
+        self._status("Atualizando a Central...")
+        self._enfileirar_central("atualizar", avisar=True, extra=guardar)
+
+    def _avisar_central_sem_git(self):
+        messagebox.showinfo(
+            TITULO,
+            "Esta cópia da Central não é um clone do git, então ela não "
+            "consegue se atualizar sozinha.\n\nA pasta é:\n\n%s\n\n"
+            "Para ganhar atualização automática, apague-a e clone o "
+            "repositório da Central com o Git para Windows."
+            % cat.pasta_da_central())
 
     def _avisar_sem_git(self):
         self._mostrar_faixa(
@@ -610,14 +726,20 @@ class Central(tk.Tk):
             "extra": extra,
         })
 
-    def _enfileirar_central(self, acao):
+    def _enfileirar_central(self, acao, avisar=False, extra=None):
+        """`avisar`: a pessoa pediu pelo menu, então quer ver o resultado.
+
+        A verificação de fundo (ao abrir a janela, ou no Verificar tudo) vem
+        com avisar=False e fica calada quando não há nada de novo.
+        """
         self.trabalho.put({
             "acao": acao,
             "id": ID_CENTRAL,
             "nome": "a Central",
             "pasta": cat.pasta_da_central(),
             "url": "",
-            "extra": None,
+            "extra": extra,
+            "avisar": avisar,
         })
 
     def _trabalhar(self):
@@ -645,9 +767,15 @@ class Central(tk.Tk):
             if repos.e_repo(pasta):
                 repos.buscar(pasta)
         elif acao == "atualizar":
-            repos.atualizar(pasta, guardar_mudancas=bool(tarefa["extra"]))
-            self.fila.put(("status", "%s foi atualizado." % tarefa["nome"]))
-            if tarefa["id"] == ID_CENTRAL:
+            veio = repos.atualizar(pasta,
+                                   guardar_mudancas=bool(tarefa["extra"]))
+            # frase sem gênero: o mesmo texto serve para "a Central" e para
+            # "Gestor de Licitações".
+            self.fila.put(("status",
+                           "%s está na versão nova." % tarefa["nome"] if veio
+                           else "%s já estava na versão mais nova."
+                           % tarefa["nome"]))
+            if tarefa["id"] == ID_CENTRAL and veio:
                 self.fila.put(("central-atualizada", tarefa, None))
                 return
         self.fila.put(("estado", tarefa, repos.situacao(pasta)))
@@ -666,14 +794,14 @@ class Central(tk.Tk):
                     tarefa, mensagem = resto
                     self._aplicar_erro(tarefa, mensagem)
                 elif tipo == "central-atualizada":
-                    self._central_atualizada()
+                    self._central_atualizada(bool(resto[0].get("extra")))
         except queue.Empty:
             pass
         self.after(120, self._drenar_fila)
 
     def _aplicar_estado(self, tarefa, retrato):
         if tarefa["id"] == ID_CENTRAL:
-            self._mostrar_estado_central(retrato)
+            self._mostrar_estado_central(retrato, tarefa.get("avisar"))
             return
         cartao = self.cartoes.get(tarefa["id"])
         if cartao:
@@ -683,8 +811,15 @@ class Central(tk.Tk):
     def _aplicar_erro(self, tarefa, mensagem):
         if tarefa["id"] == ID_CENTRAL:
             self.faixa_botao.state(["!disabled"])
-            self._status("A Central não pôde ser verificada: %s"
-                         % mensagem.split("\n")[0])
+            self._status("A Central não pôde ser %s: %s"
+                         % ("atualizada" if tarefa["acao"] == "atualizar"
+                            else "verificada", mensagem.split("\n")[0]))
+            # a atualização foi um clique da pessoa: o erro merece uma
+            # caixa, senão ela fica sem saber por que nada aconteceu.
+            if tarefa["acao"] == "atualizar":
+                messagebox.showerror(
+                    TITULO, "A Central não pôde ser atualizada:\n\n%s"
+                    % mensagem)
             return
         cartao = self.cartoes.get(tarefa["id"])
         if cartao:
@@ -719,13 +854,22 @@ class Central(tk.Tk):
             partes.append("%d não instalada(s)" % faltando)
         self._status("Tudo em dia." if not partes else " | ".join(partes))
 
-    def _central_atualizada(self):
+    def _central_atualizada(self, guardou=False):
+        """O recado do fim. Quando houve stash, ele diz como voltar.
+
+        Sem esta parte a pessoa vê a pasta na versão do GitHub, sem os
+        arquivos que ela tinha mexido, e conclui que perdeu o trabalho.
+        """
         self._esconder_faixa()
-        messagebox.showinfo(
-            TITULO,
-            "A Central foi atualizada.\n\nFeche e abra de novo para a versão "
-            "nova entrar no lugar — inclusive o catálogo, que pode ter "
-            "automações novas.")
+        recado = ("A Central foi atualizada.\n\nFeche e abra de novo "
+                  "para a versão nova entrar no lugar — inclusive o "
+                  "catálogo, que pode ter automações novas.")
+        if guardou:
+            recado += ("\n\nOs arquivos que estavam alterados foram "
+                       "guardados com o git stash — nada foi perdido. "
+                       "Para trazê-los de volta, rode nesta pasta:\n\n"
+                       "    git stash pop")
+        messagebox.showinfo(TITULO, recado)
 
     def _fechar(self):
         cat.salvar_config(self.cfg)

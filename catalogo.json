@@ -11,6 +11,14 @@
       "tipo": "janela"
     },
     {
+      "id": "coletor-tce-pi",
+      "nome": "Licitações e Contratos — TCE-PI",
+      "descricao": "Baixa as licitações e os contratos de qualquer entidade do Piauí direto dos murais do TCE-PI, organiza as pastas no padrão do Gestor V4 e gera as planilhas do Front.",
+      "repo": "https://github.com/migracao-cr2/coletor-tce-pi.git",
+      "entrada": "EXECUTAR.bat",
+      "tipo": "janela"
+    },
+    {
       "id": "migrador-acervo-noticias",
       "nome": "Migrador de Acervo de Notícias",
       "descricao": "Lê o backup de um site antigo e migra o acervo de notícias para o WordPress novo, com as mídias e as categorias.",

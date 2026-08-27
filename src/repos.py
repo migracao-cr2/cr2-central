@@ -169,15 +169,41 @@ def buscar(pasta):
 
 
 def atualizar(pasta, guardar_mudancas=False):
-    """Traz o que há de novo.
+    """Traz o que há de novo. Devolve True quando algo veio de fato.
+
+    CONFERE ANTES DE MEXER NO DISCO, e isso não é detalhe: uma cópia já em
+    dia, com arquivos alterados dentro, pagava um `git stash` para um `pull`
+    que não traria nada — o trabalho da pessoa saía da frente dela sem
+    nenhum ganho, e a pasta parecia ter voltado para a versão antiga.
+
+    O fetch daqui repete o do botão "Verificar tudo" quando ele acabou de
+    rodar. Custa um segundo e vale: sem ele, a decisão de guardar ou não os
+    arquivos sairia de um retrato que pode estar velho.
 
     --ff-only é a trava de segurança: se a cópia local tiver commits próprios,
     o git recusa em vez de inventar um merge que ninguém pediu.
     """
+    buscar(pasta)
+    if _nada_a_trazer(pasta):
+        return False
     if guardar_mudancas:
         rodar(["stash", "push", "--include-untracked", "-m",
                "guardado pela Central antes de atualizar"], pasta)
     rodar(["pull", "--ff-only", "--quiet"], pasta, tempo=120)
+    return True
+
+
+def _nada_a_trazer(pasta):
+    """True só quando dá para AFIRMAR que o GitHub não tem nada a mais.
+
+    Na dúvida devolve False: é melhor tentar o pull e deixar o git explicar
+    o problema do que recusar uma atualização que talvez exista.
+    """
+    try:
+        return rodar(["rev-list", "--count", "HEAD..@{u}"], pasta,
+                     tempo=30) == "0"
+    except ErroGit:
+        return False
 
 
 def conferir_origem(pasta, url):
@@ -197,6 +223,20 @@ def conferir_origem(pasta, url):
         raise ErroGit("Esta pasta é um clone de outro repositório:\n\n%s\n\n"
                       "O catálogo espera:\n\n%s"
                       % (atual or "(sem origin)", url))
+
+
+def endereco_origem(pasta):
+    """O endereço do `origin` desta pasta, ou "" quando não há como saber.
+
+    Lê o .git/config e nada mais: não toca a rede, por isso pode ser chamado
+    de fora da thread de trabalho sem risco de travar a janela.
+    """
+    if not e_repo(pasta):
+        return ""
+    try:
+        return rodar(["remote", "get-url", "origin"], pasta, tempo=20)
+    except ErroGit:
+        return ""
 
 
 def _mesmo_repo(a, b):

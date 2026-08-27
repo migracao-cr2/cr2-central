@@ -30,6 +30,23 @@ botão **Atualizar a Central**. Isso importa porque é junto com ela que chega
 o `catalogo.json`: **automação nova entra na tela de todo mundo sem ninguém
 reinstalar nada.**
 
+E não é preciso esperar a faixa acender: o botão **A Central ▾**, no alto da
+janela, está sempre lá.
+
+| No menu **A Central ▾** | O que faz |
+|---|---|
+| *Versão instalada* | a etiqueta ou o hash do que está nesta máquina |
+| **Verificar se há versão nova** | pergunta ao GitHub e responde no rodapé, mesmo quando não há nada de novo |
+| **Atualizar a Central** | traz a versão nova na hora |
+| **Ver o que mudou** | a lista dos commits que ainda não estão aqui |
+| **Abrir a pasta da Central no Explorer** | às vezes só se quer o caminho |
+| **Ver no GitHub** | abre o repositório no navegador |
+
+Se houver arquivo mexido na pasta da Central, ela oferece guardá-lo
+(`git stash`) antes de atualizar, como já faz com as automações. Depois de
+atualizar, feche e abra a janela: é nesse momento que a versão nova — e o
+catálogo novo — entra no lugar.
+
 ## Onde as coisas ficam
 
 ```
