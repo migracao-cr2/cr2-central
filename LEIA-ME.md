@@ -61,7 +61,18 @@ aceitar.
 
 ## Numa máquina nova
 
-**Dois cliques em `INSTALAR.bat`.** Ele confere o que falta, instala pelo
+Primeiro pegue o instalador. Como este repositório é público, não precisa
+de login nem de git para isso — vale qualquer um dos dois:
+
+- abra [INSTALAR.bat](https://github.com/migracao-cr2/cr2-central/blob/main/INSTALAR.bat)
+  no GitHub e clique em **Download raw file**;
+- ou cole isto num Prompt de Comando (o `curl` já vem no Windows):
+
+```
+curl -L -o "%USERPROFILE%\Downloads\INSTALAR.bat" https://raw.githubusercontent.com/migracao-cr2/cr2-central/main/INSTALAR.bat
+```
+
+**Depois, dois cliques em `INSTALAR.bat`.** Ele confere o que falta, instala pelo
 `winget` (que já vem no Windows), baixa a Central, põe o atalho *Central CR2*
 na área de trabalho e abre a janela. Rodar de novo não estraga nada: quando a
 Central já está instalada, ele só atualiza e abre.
