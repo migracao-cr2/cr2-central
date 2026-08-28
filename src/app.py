@@ -243,8 +243,14 @@ class Cartao(ttk.Frame):
 # --------------------------------------------------------------------------
 class Central(tk.Tk):
 
+    # Identidade da janela para o Windows. Sem isto a barra de tarefas agrupa
+    # a Central junto de qualquer outro programa em Python e mostra o ícone do
+    # Python — e um atalho fixado não reconhece a janela como sendo dele.
+    ID_WINDOWS = "CR2.Central.Automacoes"
+
     def __init__(self):
         tk.Tk.__init__(self)
+        self._identificar_no_windows()
         self.title(TITULO)
         self.geometry("940x760")
         self.minsize(700, 520)
@@ -280,10 +286,49 @@ class Central(tk.Tk):
         else:
             self._olhar_local()
 
+    def _identificar_no_windows(self):
+        """Diz ao Windows que esta janela é a Central, não "um Python".
+
+        É o que faz a barra de tarefas usar o nosso ícone e o atalho fixado
+        apontar para a janela certa. Só existe no Windows; em outro sistema a
+        chamada não existe e o programa segue igual.
+        """
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                self.ID_WINDOWS)
+        except Exception:
+            pass
+
+    def _por_o_icone(self):
+        """Ícone da janela e da barra de tarefas.
+
+        Usa o logo.ico quando existe: no Windows ele rende ícone nítido em
+        todos os tamanhos, porque o arquivo já traz um desenho por tamanho. O
+        PNG entra como reserva — é o que funciona fora do Windows.
+        """
+        ico = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "logo.ico")
+        if os.path.isfile(ico):
+            try:
+                self.iconbitmap(default=ico)
+                return True
+            except tk.TclError:
+                pass
+        imagem = self.tema.logo()
+        if imagem is not None:
+            try:
+                self.iconphoto(True, imagem)
+                return True
+            except tk.TclError:
+                pass
+        return False
+
     # ------------------------------------------------------------------ UI
     def _montar(self):
         self.tema = tema.Tema(self, self.cfg.get("tema", "claro"))
         self.tema.aplicar()
+        self._por_o_icone()
         self._estilos_extras()
         self._montar_cabecalho()
         self._montar_faixa_central()
@@ -346,10 +391,6 @@ class Central(tk.Tk):
         if imagem is not None:
             marca = ttk.Label(faixa, image=imagem, style="Marca.TLabel")
             marca.image = imagem          # sem isto o Tk descarta a imagem
-            try:
-                self.iconphoto(True, imagem)
-            except tk.TclError:
-                pass
         else:
             marca = ttk.Label(faixa, text="CR2", style="Marca.TLabel",
                               font=("Segoe UI", 20, "bold"))

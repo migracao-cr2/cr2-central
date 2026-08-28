@@ -139,6 +139,31 @@ Uma entrada em `catalogo.json` e um push. Só isso.
 }
 ```
 
+### O logo
+
+`logo.ico` (raiz) e `src/logo.png` são o emblema azul da CR2: o `.ico` vai no
+atalho e na barra de tarefas, o `.png` no cabeçalho da janela. São um
+**substituto** — havendo o logo oficial, troque os dois arquivos e nada no
+código muda. `gerar_logo.py` refaz os dois a partir do desenho (só ele precisa
+do Pillow, e só quando você quiser regerar).
+
+O `.ico` é multi-tamanho de propósito: abaixo de 32px o "CR2" viraria borrão,
+então os tamanhos pequenos levam só a silhueta azul, que é o que se reconhece
+num ícone de 16px.
+
+### Os atalhos, na instalação
+
+O `INSTALAR.bat` **pergunta** onde você quer o atalho: área de trabalho, menu
+Iniciar, os dois ou nenhum. Enter aceita o padrão (área de trabalho). O atalho
+sai com o ícone azul.
+
+**Fixar na barra de tarefas não pode ser automatizado.** O Windows 10 e o 11 não
+oferecem isso a nenhum programa — a Microsoft removeu o comando que existia no
+7. Dá para forçar mexendo no registro, mas é gambiarra que quebra em atualização
+do Windows. Então o instalador cria o atalho no menu Iniciar (que é de onde o
+"Fixar na barra de tarefas" funciona), explica o clique com o botão direito e
+oferece abrir a pasta do atalho para você já fazer isso.
+
 O campo **`icone`** é opcional: é o emoji que a Central desenha no cartão daquela automação. Sem ele, o cartão usa uma caixa (📦). Prefira emoji simples — a Central desenha em monocromático, e desenho muito detalhado vira borrão no tamanho do cartão.
 
 - `entrada` — o arquivo que abre o programa. Quando é um `.bat`, é ele quem

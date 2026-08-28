@@ -37,7 +37,7 @@ echo.
 echo      1. Git para Windows
 echo      2. Python com Tkinter
 echo      3. a propria Central
-echo      4. o atalho na area de trabalho
+echo      4. os atalhos que voce escolher
 echo.
 
 rem ------------------------------------------------------------
@@ -134,21 +134,97 @@ echo        ok.
 echo.
 
 rem ------------------------------------------------------------
-rem  4. Atalho
+rem  4. Atalhos
 rem
 rem  O caminho da area de trabalho sai do PowerShell, e nao de
 rem  %USERPROFILE%\Desktop: com o OneDrive ligado ela fica
 rem  redirecionada, e o atalho iria para uma pasta que ninguem ve.
+rem
+rem  Sobre FIXAR NA BARRA DE TAREFAS: o Windows 10 e o 11 nao tem
+rem  como um programa fazer isso sozinho - a Microsoft tirou o
+rem  comando que existia no 7. Da para forcar mexendo no registro,
+rem  mas e gambiarra que quebra em atualizacao do Windows e some
+rem  sem avisar. Entao o instalador cria o atalho no menu Iniciar,
+rem  que e de onde o "Fixar na barra de tarefas" funciona, e diz
+rem  como fazer - um clique com o botao direito.
 rem ------------------------------------------------------------
-echo  [4/4] Atalho...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Desktop'); $w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut((Join-Path $d 'Central CR2.lnk')); $s.TargetPath=$env:DEST+'\central.bat'; $s.WorkingDirectory=$env:DEST; $s.Description='Central de Automacoes CR2'; $s.Save()" >nul 2>&1
-if errorlevel 1 goto :sem_atalho
-echo        "Central CR2" esta na area de trabalho.
+echo  [4/4] Atalhos...
+echo.
+echo        Onde voce quer o atalho da Central?
+echo.
+echo          [1] Area de trabalho          (padrao)
+echo          [2] Menu Iniciar
+echo          [3] Os dois
+echo          [4] Nenhum
+echo.
+set "ONDE="
+set /p "ONDE=        Escolha [1-4] e Enter: "
+rem Tira espaco ANTES de decidir o padrao, e testa string vazia em vez de
+rem "not defined": dependendo do que vem na entrada, o set /p deixa a
+rem variavel VAZIA em vez de indefinida, e ai "not defined" nao pega - quem
+rem so aperta Enter caia no "nao entendi" em vez do padrao.
+set "ONDE=%ONDE: =%"
+if "%ONDE%"=="" set "ONDE=1"
+
+set "FAZ_MESA="
+set "FAZ_MENU="
+if "%ONDE%"=="1" set "FAZ_MESA=1"
+if "%ONDE%"=="2" set "FAZ_MENU=1"
+rem dois ifs em vez de um com "&": o "&" dentro de if e ambiguo
+rem entre versoes do cmd - em algumas o segundo comando roda
+rem sempre, fora do if.
+if "%ONDE%"=="3" set "FAZ_MESA=1"
+if "%ONDE%"=="3" set "FAZ_MENU=1"
+if "%ONDE%"=="4" goto :sem_nenhum_atalho
+if not defined FAZ_MESA if not defined FAZ_MENU (
+    echo.
+    echo        nao entendi a resposta; criando na area de trabalho.
+    set "FAZ_MESA=1"
+)
+echo.
+
+set "ICONE=%DEST%\logo.ico"
+if not exist "%ICONE%" set "ICONE=%DEST%\central.bat"
+
+if not defined FAZ_MESA goto :atalho_menu
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Desktop'); $w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut((Join-Path $d 'Central CR2.lnk')); $s.TargetPath=$env:DEST+'\central.bat'; $s.WorkingDirectory=$env:DEST; $s.Description='Central de Automacoes CR2'; $s.IconLocation=$env:ICONE+',0'; $s.Save()" >nul 2>&1
+if errorlevel 1 (
+    echo        nao deu para criar o atalho na area de trabalho.
+) else (
+    echo        "Central CR2" esta na area de trabalho.
+)
+
+:atalho_menu
+if not defined FAZ_MENU goto :fim_atalhos
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Programs'); $w=New-Object -ComObject WScript.Shell; $s=$w.CreateShortcut((Join-Path $d 'Central CR2.lnk')); $s.TargetPath=$env:DEST+'\central.bat'; $s.WorkingDirectory=$env:DEST; $s.Description='Central de Automacoes CR2'; $s.IconLocation=$env:ICONE+',0'; $s.Save()" >nul 2>&1
+if errorlevel 1 (
+    echo        nao deu para criar o atalho no menu Iniciar.
+    goto :fim_atalhos
+)
+echo        "Central CR2" esta no menu Iniciar.
+
+:fim_atalhos
+echo.
+echo        Para fixar na barra de tarefas: clique com o botao
+echo        direito no atalho e escolha "Fixar na barra de tarefas".
+echo        Nenhum programa consegue fazer isso sozinho no Windows
+echo        10 ou 11 - a Microsoft nao permite.
+echo.
+set "ABRIR="
+set /p "ABRIR=        Abrir a pasta do atalho agora? [S/n]: "
+if /i "%ABRIR%"=="n" goto :login
+if defined FAZ_MENU (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Programs'); Start-Process explorer.exe ('/select,' + (Join-Path $d 'Central CR2.lnk'))" >nul 2>&1
+) else (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=[Environment]::GetFolderPath('Desktop'); Start-Process explorer.exe ('/select,' + (Join-Path $d 'Central CR2.lnk'))" >nul 2>&1
+)
 goto :login
 
-:sem_atalho
-echo        nao deu para criar o atalho. O central.bat na pasta
-echo        da Central funciona igual.
+:sem_nenhum_atalho
+echo.
+echo        sem atalho, entao. O central.bat na pasta da Central
+echo        abre a janela do mesmo jeito.
+goto :login
 
 rem ------------------------------------------------------------
 rem  O login do GitHub acontece AQUI, e nao la dentro
