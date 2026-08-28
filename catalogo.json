@@ -44,12 +44,11 @@
     },
     {
       "id": "publicador-emendas",
-      "nome": "Publicador de Emendas Parlamentares",
-      "descricao": "Publica emendas parlamentares no Portal CR2 a partir de uma planilha, com validação, simulação e relatório por emenda.",
+      "nome": "Gerador de Planilha de Emendas Parlamentares",
+      "descricao": "Você informa o município, a UF e o período; ele busca as emendas no Portal da Transparência federal e gera a planilha com as 36 colunas do modelo, em .csv e .xlsx. Tem também a tela \"Preencher no Portal CR2\", que mostra a emenda na ordem das telas do portal com botão de copiar campo por campo, para quem cadastra à mão.",
       "repo": "https://github.com/migracao-cr2/publicador-emendas.git",
       "entrada": "emendas.bat",
-      "tipo": "janela",
-      "observacao": "INATIVO — ainda não entrou em uso. Está aqui para não se perder e para receber atualizações, mas não deve ser usado em produção."
+      "tipo": "janela"
     }
   ]
 }
