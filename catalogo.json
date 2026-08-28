@@ -1,10 +1,11 @@
 {
-  "_leia": "QUAIS automações existem. Para acrescentar uma, some uma entrada aqui e dê push: a Central de todo mundo passa a mostrá-la sozinha, sem reinstalar nada. Onde cada uma fica em cada máquina é assunto do config.json local, não deste arquivo.",
+  "_leia": "QUAIS automações existem. Para acrescentar uma, some uma entrada aqui e dê push: a Central de todo mundo passa a mostrá-la sozinha, sem reinstalar nada. O campo \"icone\" é o emoji que a Central desenha no cartão (opcional). Onde cada uma fica em cada máquina é assunto do config.json local, não deste arquivo.",
   "versao": 1,
   "apps": [
     {
       "id": "gestor-licitacoes",
       "nome": "Gestor de Licitações",
+      "icone": "⚖",
       "descricao": "Lê uma pasta por licitação e gera a planilha do Front, a planilha de contratos e as pastas organizadas.",
       "repo": "https://github.com/migracao-cr2/gestor-licitacoes.git",
       "entrada": "licitacoes.bat",
@@ -13,6 +14,7 @@
     {
       "id": "coletor-tce-pi",
       "nome": "Licitações e Contratos — TCE-PI",
+      "icone": "🏛",
       "descricao": "Baixa as licitações e os contratos de qualquer entidade do Piauí direto dos murais do TCE-PI, organiza as pastas no padrão do Gestor V4 e gera as planilhas do Front.",
       "repo": "https://github.com/migracao-cr2/coletor-tce-pi.git",
       "entrada": "EXECUTAR.bat",
@@ -21,6 +23,7 @@
     {
       "id": "coletor-tcm-pa",
       "nome": "Licitações e Contratos — TCM-PA",
+      "icone": "🏛",
       "descricao": "Baixa as licitações e os contratos de qualquer município do Pará direto do Portal da Transparência do TCM-PA, separa prefeitura e câmara, organiza as pastas no padrão do Gestor V4 e gera as planilhas do Front.",
       "repo": "https://github.com/migracao-cr2/coletor-tcm-pa.git",
       "entrada": "EXECUTAR.bat",
@@ -29,6 +32,7 @@
     {
       "id": "envio-pdfs-email",
       "nome": "Envio de PDFs por E-mail",
+      "icone": "✉",
       "descricao": "Padroniza os nomes dos PDFs no padrão Tipo Nnn-aaaa-Sigla (pelo nome do arquivo, pelo texto ou por OCR) e envia tudo para o e-mail da migração em lotes que nunca estouram o limite do Gmail, com a label do colaborador.",
       "repo": "https://github.com/migracao-cr2/envio-pdfs-email.git",
       "entrada": "Enviar PDFs.bat",
@@ -37,6 +41,7 @@
     {
       "id": "migrador-acervo-noticias",
       "nome": "Migrador de Acervo de Notícias",
+      "icone": "📰",
       "descricao": "Lê o backup de um site antigo e migra o acervo de notícias para o WordPress novo, com as mídias e as categorias.",
       "repo": "https://github.com/migracao-cr2/migrador-acervo-noticias.git",
       "entrada": "migrador.bat",
@@ -45,7 +50,8 @@
     {
       "id": "publicador-emendas",
       "nome": "Gerador de Planilha de Emendas Parlamentares",
-      "descricao": "Você informa o município, a UF e o período; ele busca as emendas no Portal da Transparência federal e gera a planilha com as 36 colunas do modelo, em .csv e .xlsx. Tem também a tela \"Preencher no Portal CR2\", que mostra a emenda na ordem das telas do portal com botão de copiar campo por campo, para quem cadastra à mão.",
+      "icone": "💰",
+      "descricao": "Você informa o município, a UF e o período; ele busca as emendas no Portal da Transparência federal e gera a planilha com as 36 colunas do modelo, em .csv e .xlsx. Tem também a tela de preenchimento manual no Portal CR2, com botão de copiar campo por campo.",
       "repo": "https://github.com/migracao-cr2/publicador-emendas.git",
       "entrada": "emendas.bat",
       "tipo": "janela"

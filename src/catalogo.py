@@ -53,6 +53,9 @@ class App(object):
         self.tipo = bruto.get("tipo", "janela")      # janela | terminal
         self.subpasta = bruto.get("subpasta", "")
         self.observacao = bruto.get("observacao", "")
+        # Emoji que a Central desenha no cartão. Opcional: sem ele, a Central
+        # usa um ícone padrão, e o catálogo antigo continua funcionando.
+        self.icone = bruto.get("icone", "")
 
     @property
     def url_github(self):

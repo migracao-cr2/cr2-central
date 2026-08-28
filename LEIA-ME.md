@@ -132,11 +132,14 @@ Uma entrada em `catalogo.json` e um push. Só isso.
   "id": "nome-do-repositorio",
   "nome": "Nome que aparece na tela",
   "descricao": "Uma linha explicando para que serve.",
+  "icone": "📦",
   "repo": "https://github.com/migracao-cr2/nome-do-repositorio.git",
   "entrada": "programa.bat",
   "tipo": "janela"
 }
 ```
+
+O campo **`icone`** é opcional: é o emoji que a Central desenha no cartão daquela automação. Sem ele, o cartão usa uma caixa (📦). Prefira emoji simples — a Central desenha em monocromático, e desenho muito detalhado vira borrão no tamanho do cartão.
 
 - `entrada` — o arquivo que abre o programa. Quando é um `.bat`, é ele quem
   manda: a Central não repete a lógica de achar o Python nem de instalar

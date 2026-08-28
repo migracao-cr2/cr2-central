@@ -73,7 +73,20 @@ def registrar_erro(exc_type, exc_value, exc_tb):
 # O cartão de uma automação
 # --------------------------------------------------------------------------
 class Cartao(ttk.Frame):
-    """Uma automação na tela. Só desenha e avisa a janela; não decide nada."""
+    """Uma automação na tela. Só desenha e avisa a janela; não decide nada.
+
+    O cartão é desenhado para viver numa GRADE de duas colunas, não numa faixa
+    de largura total. Por isso o texto tem largura fixa de quebra e as ações
+    ficam ancoradas embaixo: numa grade, cartão que cresce conforme o conteúdo
+    deixa a fileira desalinhada.
+    """
+
+    # Ícone usado quando o catálogo não traz um. Não deixar sem nada: o cartão
+    # sem ícone ao lado de cinco com ícone fica com cara de erro.
+    ICONE_PADRAO = "\U0001F4E6"          # caixa
+
+    # Largura de quebra do texto, em pixels. Casa com a coluna da grade.
+    QUEBRA = 300
 
     def __init__(self, pai, app, central):
         ttk.Frame.__init__(self, pai, style="Cartao.TFrame", padding=(14, 12))
@@ -81,25 +94,47 @@ class Cartao(ttk.Frame):
         self.central = central
         self.retrato = {}
         self.ocupado = False
+        # rótulos cuja quebra acompanha a largura do cartão, com a folga que
+        # cada um tem à esquerda (ícone, recuo)
+        self._textos = []
+        self._quebra_atual = 0
 
         # As molduras de dentro usam CartaoLinha, sem borda: só o cartão tem
         # contorno. Com o estilo Cartao aqui, cada linha desenhava um retângulo
         # próprio e o cartão virava uma grade.
         topo = ttk.Frame(self, style="CartaoLinha.TFrame")
         topo.pack(fill="x")
-        ttk.Label(topo, text=app.nome, style="CartaoTitulo.TLabel").pack(
-            side="left")
-        self.lbl_estado = ttk.Label(topo, text="", style="CartaoSuave.TLabel")
-        self.lbl_estado.pack(side="right")
+
+        ttk.Label(topo, text=app.icone or self.ICONE_PADRAO,
+                  style="CartaoIcone.TLabel").pack(side="left", padx=(0, 10))
+
+        titulos = ttk.Frame(topo, style="CartaoLinha.TFrame")
+        titulos.pack(side="left", fill="x", expand=True)
+        titulo = ttk.Label(titulos, text=app.nome, style="CartaoTitulo.TLabel",
+                           wraplength=self.QUEBRA, justify="left")
+        titulo.pack(anchor="w")
+        # 64 = ícone (30) + espaço (10) + recuos do cartão (24)
+        self._textos.append((titulo, 64))
+        self.lbl_estado = ttk.Label(titulos, text="",
+                                    style="CartaoSuave.TLabel")
+        self.lbl_estado.pack(anchor="w")
 
         if app.descricao:
-            ttk.Label(self, text=app.descricao, style="CartaoSuave.TLabel",
-                      wraplength=720, justify="left").pack(
-                          anchor="w", pady=(4, 0))
+            desc = ttk.Label(self, text=app.descricao,
+                             style="CartaoSuave.TLabel",
+                             wraplength=self.QUEBRA, justify="left")
+            desc.pack(anchor="w", pady=(8, 0))
+            self._textos.append((desc, 4))
         if app.observacao:
-            ttk.Label(self, text=app.observacao, style="CartaoAviso.TLabel",
-                      wraplength=720, justify="left").pack(
-                          anchor="w", pady=(4, 0))
+            obs = ttk.Label(self, text="⚠  " + app.observacao,
+                            style="CartaoAviso.TLabel",
+                            wraplength=self.QUEBRA, justify="left")
+            obs.pack(anchor="w", pady=(6, 0))
+            self._textos.append((obs, 4))
+
+        # empurra as ações para o rodapé do cartão, alinhando as fileiras
+        ttk.Frame(self, style="CartaoLinha.TFrame").pack(fill="both",
+                                                        expand=True)
 
         acoes = ttk.Frame(self, style="CartaoLinha.TFrame")
         acoes.pack(fill="x", pady=(10, 0))
@@ -114,13 +149,36 @@ class Cartao(ttk.Frame):
             acoes, text="Atualizar", command=lambda: central.atualizar(
                 self.app))
         self.btn["pasta"] = ttk.Button(
-            acoes, text="Mais  \u25be", width=9,
+            acoes, text="Mais  ▾", width=9,
             command=lambda: central.menu_do_cartao(self))
         for nome in ("instalar", "abrir", "atualizar", "pasta"):
             self.btn[nome].pack(side="left", padx=(0, 8))
 
-        self.lbl_versao = ttk.Label(acoes, text="", style="CartaoSuave.TLabel")
+        self.lbl_versao = ttk.Label(acoes, text="", style="CartaoFraco.TLabel")
         self.lbl_versao.pack(side="right")
+
+        self.bind("<Configure>", self._ajustar_quebra)
+
+    def _ajustar_quebra(self, evento):
+        """A quebra do texto acompanha a largura do cartão.
+
+        Sem isto, o cartão numa coluna só (janela estreita) mantinha o texto
+        quebrando na largura de duas colunas e sobrava um vazio à direita.
+
+        A comparação com `_quebra_atual` não é economia: mudar wraplength
+        redesenha o cartão, o que dispara <Configure> de novo — sem a guarda,
+        vira um laço.
+        """
+        largura = max(evento.width - 28, 180)
+        # A guarda é pequena de propósito. Com 10px, a primeira medida (tirada
+        # antes de a grade assentar) vinha maior que a definitiva, a diferença
+        # ficava abaixo do limite e a correção nunca acontecia — o título do
+        # cartão mais comprido saía cortado na borda.
+        if abs(largura - self._quebra_atual) < 3:
+            return
+        self._quebra_atual = largura
+        for rotulo, folga in self._textos:
+            rotulo.configure(wraplength=max(largura - folga, 140))
 
     # --------------------------------------------------------------- estado
     def mostrar(self, retrato):
@@ -131,23 +189,26 @@ class Cartao(ttk.Frame):
         instalado = r.get("instalado")
         atrasado = r.get("atrasado", 0)
 
+        # O sinal é um ponto colorido antes do texto: numa grade de cartões,
+        # a cor sozinha se perde, e o texto sozinho não salta.
         if r.get("erro"):
-            self._estado(r["erro"].split("\n")[0], "Erro.TLabel")
+            self._estado("✕  " + r["erro"].split("\n")[0], "Erro.TLabel")
         elif not instalado:
-            self._estado("não instalado", "CartaoSuave.TLabel")
+            self._estado("○  não instalado", "CartaoFraco.TLabel")
         elif atrasado:
-            self._estado("%d %s no GitHub"
+            self._estado("▲  %d %s no GitHub"
                          % (atrasado,
                             "novidade" if atrasado == 1 else "novidades"),
                          "Alerta.TLabel")
         elif r.get("adiantado"):
-            self._estado("com trabalho ainda não enviado", "Alerta.TLabel")
+            self._estado("▲  com trabalho ainda não enviado",
+                         "Alerta.TLabel")
         else:
-            self._estado("em dia", "Ok.TLabel")
+            self._estado("●  em dia", "Ok.TLabel")
 
         versao = r.get("versao", "")
         if instalado and r.get("sujo"):
-            versao = (versao + "  (com arquivos alterados)").strip()
+            versao = (versao + "  (alterado)").strip()
         self.lbl_versao.configure(text=versao)
 
         self._botao("instalar", mostrar=not instalado)
@@ -158,7 +219,7 @@ class Cartao(ttk.Frame):
 
     def trabalhando(self, texto):
         self.ocupado = True
-        self._estado(texto, "CartaoSuave.TLabel")
+        self._estado("◌  " + texto, "CartaoSuave.TLabel")
         for b in self.btn.values():
             b.state(["disabled"])
 
@@ -185,8 +246,8 @@ class Central(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.title(TITULO)
-        self.geometry("880x680")
-        self.minsize(720, 520)
+        self.geometry("940x760")
+        self.minsize(700, 520)
 
         self.cfg = cat.carregar_config()
         self.fila = queue.Queue()          # thread de trabalho -> tela
@@ -243,6 +304,15 @@ class Central(tk.Tk):
                     foreground=c["texto"], font=("Segoe UI", 12, "bold"))
         e.configure("CartaoSuave.TLabel", background=c["superficie"],
                     foreground=c["texto_suave"])
+        # O ícone do cartão. Fonte própria porque o emoji do Segoe UI comum
+        # sai pequeno demais ao lado de um título em 12.
+        e.configure("CartaoIcone.TLabel", background=c["superficie"],
+                    foreground=c["destaque"],
+                    font=("Segoe UI Emoji", 20))
+        # Mais apagado que o Suave: para o hash da versão e o "não instalado",
+        # que são informação de canto de olho, não de leitura.
+        e.configure("CartaoFraco.TLabel", background=c["superficie"],
+                    foreground=c["texto_suave"], font=("Segoe UI", 8))
         e.configure("CartaoAviso.TLabel", background=c["superficie"],
                     foreground=c["alerta"])
         e.configure("Ok.TLabel", background=c["superficie"],
@@ -331,8 +401,13 @@ class Central(tk.Tk):
     def _esconder_faixa(self):
         self.faixa.pack_forget()
 
+    # Largura mínima que um cartão precisa para caber numa coluna da grade.
+    # Abaixo disso a grade passa a uma coluna só — cartão apertado fica pior
+    # do que cartão largo.
+    LARGURA_CARTAO = 380
+
     def _montar_lista(self):
-        """Área rolável com um cartão por automação."""
+        """Área rolável com os cartões numa grade que reflui."""
         moldura = ttk.Frame(self, padding=(12, 10))
         moldura.pack(fill="both", expand=True)
 
@@ -351,11 +426,7 @@ class Central(tk.Tk):
         self.dentro.bind(
             "<Configure>",
             lambda e: self.tela.configure(scrollregion=self.tela.bbox("all")))
-        # sem isto os cartões ficam com a largura do conteúdo, não da janela
-        self.tela.bind(
-            "<Configure>",
-            lambda e: self.tela.itemconfigure(self.janela_dentro,
-                                              width=e.width))
+        self.tela.bind("<Configure>", self._largura_mudou)
         self.tela.bind_all("<MouseWheel>", self._rolar)
 
         if self.erro_catalogo:
@@ -366,9 +437,38 @@ class Central(tk.Tk):
 
         for app in self.apps:
             cartao = Cartao(self.dentro, app, self)
-            cartao.pack(fill="x", pady=(0, 10))
             self.cartoes[app.id] = cartao
             cartao.mostrar({})
+
+        self.colunas_na_tela = 0
+        self._dispor(colunas=2)
+
+    def _largura_mudou(self, evento):
+        """A janela mudou de tamanho: refaz a grade se o número de colunas mudou.
+
+        Sem isto os cartões ficavam com a largura do conteúdo, não da janela.
+        """
+        self.tela.itemconfigure(self.janela_dentro, width=evento.width)
+        colunas = max(1, min(2, evento.width // self.LARGURA_CARTAO))
+        if colunas != getattr(self, "colunas_na_tela", 0):
+            self._dispor(colunas)
+
+    def _dispor(self, colunas):
+        """Coloca os cartões em `colunas` colunas, todos do mesmo tamanho."""
+        self.colunas_na_tela = colunas
+        for cartao in self.cartoes.values():
+            cartao.grid_forget()
+        # zera pesos antigos antes de redistribuir
+        for i in range(4):
+            self.dentro.columnconfigure(i, weight=0, uniform="")
+        for i, cartao in enumerate(self.cartoes.values()):
+            cartao.grid(row=i // colunas, column=i % colunas,
+                        sticky="nsew", padx=(0, 10), pady=(0, 10))
+        # uniform faz as colunas terem exatamente a mesma largura; sem isso,
+        # a coluna com o texto mais comprido fica maior e a grade torta
+        for c in range(colunas):
+            self.dentro.columnconfigure(c, weight=1, uniform="cartoes")
+        self.tela.configure(scrollregion=self.tela.bbox("all"))
 
     def _rolar(self, evento):
         # o Tk do Windows manda 120 por "clique" da rodinha
