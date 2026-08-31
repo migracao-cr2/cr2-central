@@ -48,6 +48,15 @@
       "tipo": "janela"
     },
     {
+      "id": "convenios-transferegov",
+      "nome": "Painel de Convênios TransfereGOV",
+      "icone": "🤝",
+      "descricao": "Pergunta o estado e o município e mostra os convênios dele a partir dos dados abertos do TransfereGOV, com filtros por ano, órgão, tipo e situação. Exporta a planilha do que está na tela, e junto a de repasses.",
+      "repo": "https://github.com/migracao-cr2/convenios-transferegov.git",
+      "entrada": "painel.bat",
+      "tipo": "janela"
+    },
+    {
       "id": "publicador-emendas",
       "nome": "Gerador de Planilha de Emendas Parlamentares",
       "icone": "💰",
