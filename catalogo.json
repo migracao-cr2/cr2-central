@@ -64,6 +64,15 @@
       "repo": "https://github.com/migracao-cr2/publicador-emendas.git",
       "entrada": "emendas.bat",
       "tipo": "janela"
+    },
+    {
+      "id": "programa-de-obras",
+      "nome": "Programa de Obras",
+      "icone": "🏗",
+      "descricao": "Você escolhe o município, o portal e os anos; ele busca as obras na fonte pública do tribunal de contas e mostra cada uma já dividida nas telas do Portal CR2, com um botão de copiar em cada campo. Não publica e não guarda senha: quem cola é você.",
+      "repo": "https://github.com/migracao-cr2/programa-de-obras.git",
+      "entrada": "obras.bat",
+      "tipo": "janela"
     }
   ]
 }
