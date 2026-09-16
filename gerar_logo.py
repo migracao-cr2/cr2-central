@@ -30,37 +30,52 @@ AZUL_CLARO = (45, 106, 160)
 BRANCO = (255, 255, 255)
 
 FONTE = r"C:\Windows\Fonts\segoeuib.ttf"       # Segoe UI Bold
-LADO = 512                                     # desenha grande e reduz
+LADO = 512                                     # tamanho de referência
+SUPER = 8                                      # desenha grande e reduz
 # Altura que o cabeçalho da janela usa (tema.ALTURA_LOGO).
 ALTURA_CABECALHO = 44
+# Abaixo disto o emblema usa o desenho miúdo (ver `desenhar`).
+MIUDO = 32
 
 
-def desenhar(lado=LADO, texto="CR2", com_texto=True):
-    """O emblema, num quadrado de `lado` pixels, com fundo transparente."""
-    img = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
+def desenhar(lado=LADO, texto="CR2"):
+    """O emblema, num quadrado de `lado` pixels, com fundo transparente.
+
+    Sempre desenhado NO TAMANHO FINAL (por cima de uma tela SUPER vezes maior,
+    reduzida no fim): reduzir um desenho de 512px até 16px come o texto, e é
+    de onde vinha o ícone vazio na barra de tarefas.
+
+    Abaixo de MIUDO o desenho muda, porque nesses tamanhos não há pixel de
+    sobra: a margem e o respiro das laterais encolhem, para o "CR2" ocupar
+    quase toda a face, e o brilho do topo sai — em 16px ele não se lê como
+    brilho, vira uma emenda no meio do quadrado.
+    """
+    miudo = lado < MIUDO
+    lente = lado * SUPER
+    img = Image.new("RGBA", (lente, lente), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    # Quadrado arredondado. O raio proporcional mantém a mesma silhueta em
-    # qualquer tamanho.
-    margem = int(lado * 0.045)
-    raio = int(lado * 0.20)
-    d.rounded_rectangle([margem, margem, lado - margem, lado - margem],
+    # Quadrado arredondado. Os fatores são proporcionais, então a silhueta é a
+    # mesma em qualquer tamanho dentro de cada um dos dois desenhos.
+    margem = int(lente * (0.0 if miudo else 0.045))
+    raio = int(lente * 0.20)
+    d.rounded_rectangle([margem, margem, lente - margem, lente - margem],
                         radius=raio, fill=AZUL)
 
     # Um brilho sutil no topo, para o emblema não ficar um bloco morto.
-    brilho = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
-    ImageDraw.Draw(brilho).rounded_rectangle(
-        [margem, margem, lado - margem, int(lado * 0.52)],
-        radius=raio, fill=AZUL_CLARO + (70,))
-    img = Image.alpha_composite(img, brilho)
-
-    if not com_texto:
-        return img
+    if not miudo:
+        brilho = Image.new("RGBA", (lente, lente), (0, 0, 0, 0))
+        ImageDraw.Draw(brilho).rounded_rectangle(
+            [margem, margem, lente - margem, int(lente * 0.52)],
+            radius=raio, fill=AZUL_CLARO + (70,))
+        img = Image.alpha_composite(img, brilho)
 
     d = ImageDraw.Draw(img)
-    # Acha o maior corpo de fonte que caiba na largura útil.
-    util = lado - 2 * margem - int(lado * 0.16)
-    corpo = int(lado * 0.42)
+    # Acha o maior corpo de fonte que caiba na área útil, em largura e altura.
+    respiro = int(lente * (0.04 if miudo else 0.16))
+    util = lente - 2 * margem - respiro
+    corpo = int(lente * 0.62)
+    passo = max(1, lente // 200)
     fonte = None
     while corpo > 8:
         try:
@@ -69,21 +84,20 @@ def desenhar(lado=LADO, texto="CR2", com_texto=True):
             fonte = ImageFont.load_default()
             break
         caixa = d.textbbox((0, 0), texto, font=fonte)
-        if (caixa[2] - caixa[0]) <= util:
+        if (caixa[2] - caixa[0]) <= util and (caixa[3] - caixa[1]) <= util:
             break
-        corpo -= 2
+        corpo -= passo
 
     caixa = d.textbbox((0, 0), texto, font=fonte)
-    x = (lado - (caixa[2] - caixa[0])) / 2 - caixa[0]
-    y = (lado - (caixa[3] - caixa[1])) / 2 - caixa[1]
+    x = (lente - (caixa[2] - caixa[0])) / 2 - caixa[0]
+    y = (lente - (caixa[3] - caixa[1])) / 2 - caixa[1]
     d.text((x, y), texto, font=fonte, fill=BRANCO)
-    return img
+    return img.resize((lado, lado), Image.LANCZOS)
 
 
 def gerar(pasta_png, pasta_ico=None):
     """Grava logo.png e logo.ico. Devolve os caminhos."""
     pasta_ico = pasta_ico or pasta_png
-    grande = desenhar()
 
     # PNG para o cabeçalho da janela.
     #
@@ -93,22 +107,17 @@ def gerar(pasta_png, pasta_ico=None):
     # ALTURA_LOGO, a redução cai num fator inteiro redondo e a imagem que o Tk
     # desenha vem de um LANCZOS feito aqui — não de um descarte de pixels.
     caminho_png = os.path.join(pasta_png, "logo.png")
-    grande.resize((ALTURA_CABECALHO * 2,) * 2, Image.LANCZOS).save(caminho_png)
+    desenhar(ALTURA_CABECALHO * 2).save(caminho_png)
 
-    # ICO multi-tamanho. Nos tamanhos pequenos o "CR2" vira borrão, então
-    # abaixo de 32px o emblema vai SEM texto: só a silhueta azul, que é o que
-    # se reconhece num ícone de 16px.
+    # ICO multi-tamanho, cada quadro DESENHADO no seu tamanho (é `desenhar`
+    # que cuida do "CR2" continuar legível em 16px).
     #
     # CUIDADO: o Pillow só usa um quadro pronto quando ele vem em
     # `append_images` COM O TAMANHO EXATO da entrada. Passar `sizes` e uma
     # imagem grande faz ele reescalar a base e ignorar os quadros — foi assim
     # que a primeira versão saiu com "CR2" borrado em 16px.
     tamanhos = (256, 128, 64, 48, 32, 24, 20, 16)
-    sem_texto = desenhar(com_texto=False)
-    quadros = []
-    for t in tamanhos:
-        origem = grande if t >= 32 else sem_texto
-        quadros.append(origem.resize((t, t), Image.LANCZOS))
+    quadros = [desenhar(t) for t in tamanhos]
 
     caminho_ico = os.path.join(pasta_ico, "logo.ico")
     quadros[0].save(caminho_ico, format="ICO",
