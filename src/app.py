@@ -447,6 +447,18 @@ class Central(tk.Tk):
     # do que cartão largo.
     LARGURA_CARTAO = 380
 
+    # Teto de colunas. Passando disto o cartão fica estreito demais para o
+    # título de duas linhas que vários têm.
+    MAX_COLUNAS = 4
+
+    # Largura máxima da GRADE, não da janela. Numa tela de 1920 a grade de duas
+    # colunas esticava cada cartão até 930px: uma descrição de três linhas
+    # virava uma linha e meia atravessando o monitor, com o resto do cartão
+    # vazio. Acima deste teto a grade para de crescer e passa a ser CENTRADA,
+    # que é o que todo catálogo de cartões faz — a janela continua do tamanho
+    # que o usuário quiser.
+    LARGURA_MAXIMA_GRADE = 1500
+
     def _montar_lista(self):
         """Área rolável com os cartões numa grade que reflui."""
         moldura = ttk.Frame(self, padding=(12, 10))
@@ -488,9 +500,13 @@ class Central(tk.Tk):
         """A janela mudou de tamanho: refaz a grade se o número de colunas mudou.
 
         Sem isto os cartões ficavam com a largura do conteúdo, não da janela.
+        A grade cresce até LARGURA_MAXIMA_GRADE e daí em diante fica centrada:
+        maximizar a janela passa a dar MAIS COLUNAS, não cartões mais largos.
         """
-        self.tela.itemconfigure(self.janela_dentro, width=evento.width)
-        colunas = max(1, min(2, evento.width // self.LARGURA_CARTAO))
+        largura = min(evento.width, self.LARGURA_MAXIMA_GRADE)
+        self.tela.itemconfigure(self.janela_dentro, width=largura)
+        self.tela.coords(self.janela_dentro, max(0, (evento.width - largura) // 2), 0)
+        colunas = max(1, min(self.MAX_COLUNAS, largura // self.LARGURA_CARTAO))
         if colunas != getattr(self, "colunas_na_tela", 0):
             self._dispor(colunas)
 
@@ -500,7 +516,7 @@ class Central(tk.Tk):
         for cartao in self.cartoes.values():
             cartao.grid_forget()
         # zera pesos antigos antes de redistribuir
-        for i in range(4):
+        for i in range(self.MAX_COLUNAS):
             self.dentro.columnconfigure(i, weight=0, uniform="")
         for i, cartao in enumerate(self.cartoes.values()):
             cartao.grid(row=i // colunas, column=i % colunas,
@@ -509,6 +525,10 @@ class Central(tk.Tk):
         # a coluna com o texto mais comprido fica maior e a grade torta
         for c in range(colunas):
             self.dentro.columnconfigure(c, weight=1, uniform="cartoes")
+        # o scrollregion tem de sair do tamanho JÁ CALCULADO. Medido antes do
+        # update, ele guarda a grade anterior — e uma região maior que o
+        # conteúdo deixa rolar para dentro de uma faixa em branco.
+        self.dentro.update_idletasks()
         self.tela.configure(scrollregion=self.tela.bbox("all"))
 
     def _rolar(self, evento):
