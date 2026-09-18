@@ -23,6 +23,8 @@ import os
 import tkinter as tk
 from tkinter import ttk
 
+import escala
+
 PASTA_BASE = os.path.dirname(os.path.abspath(__file__))
 ARQ_LOGO = os.path.join(PASTA_BASE, "logo.png")
 
@@ -86,7 +88,8 @@ ESCURO = {
 
 PALETAS = {"claro": CLARO, "escuro": ESCURO}
 
-# Altura máxima do logo na barra de título, em pixels.
+# Altura máxima do logo na barra de título, em pixels de 100%. Numa tela
+# de notebook em 125% ele cresce junto com o título ao lado.
 ALTURA_LOGO = 44
 
 
@@ -164,7 +167,8 @@ class Tema:
         # ---- botões ----
         e.configure("TButton", background=c["superficie"],
                     foreground=c["texto"], bordercolor=c["borda"],
-                    padding=(10, 6), relief="flat")
+                    padding=(escala.px(10), escala.px(6)),
+                    relief="flat")
         e.map("TButton",
               background=[("pressed", c["destaque_suave"]),
                           ("active", c["destaque_suave"]),
@@ -173,7 +177,8 @@ class Tema:
 
         # botão dos três passos: é a ação principal, então leva a cor da marca
         e.configure("Acao.TButton", background=c["destaque"],
-                    foreground=c["destaque_texto"], padding=(10, 6),
+                    foreground=c["destaque_texto"],
+                    padding=(escala.px(10), escala.px(6)),
                     relief="flat", bordercolor=c["destaque"])
         e.map("Acao.TButton",
               background=[("pressed", c["cabecalho_fundo"]),
@@ -186,7 +191,7 @@ class Tema:
             e.configure(nome, fieldbackground=c["superficie"],
                         foreground=c["texto"], bordercolor=c["borda"],
                         insertcolor=c["texto"], arrowcolor=c["texto_suave"],
-                        padding=3)
+                        padding=escala.px(3))
             e.map(nome,
                   fieldbackground=[("readonly", c["superficie"]),
                                    ("disabled", c["fundo"])],
@@ -203,12 +208,13 @@ class Tema:
         # ---- tabela ----
         e.configure("Treeview", background=c["superficie"],
                     fieldbackground=c["superficie"], foreground=c["texto"],
-                    bordercolor=c["borda"], rowheight=24)
+                    bordercolor=c["borda"], rowheight=escala.px(24))
         e.map("Treeview",
               background=[("selected", c["selecao"])],
               foreground=[("selected", c["selecao_texto"])])
         e.configure("Treeview.Heading", background=c["destaque_suave"],
-                    foreground=c["texto"], relief="flat", padding=(6, 4))
+                    foreground=c["texto"], relief="flat",
+                    padding=(escala.px(6), escala.px(4)))
         e.map("Treeview.Heading",
               background=[("active", c["destaque_suave"])])
 
@@ -270,8 +276,9 @@ class Tema:
         except tk.TclError:
             return None
         altura = imagem.height()
-        if altura > ALTURA_LOGO:
-            fator = max(1, int(round(altura / float(ALTURA_LOGO))))
+        alvo = escala.px(ALTURA_LOGO)
+        if altura > alvo:
+            fator = max(1, int(round(altura / float(alvo))))
             imagem = imagem.subsample(fator, fator)
         self._logo = imagem
         return self._logo

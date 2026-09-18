@@ -41,6 +41,7 @@ if PASTA_SRC not in sys.path:
     sys.path.insert(0, PASTA_SRC)
 
 import catalogo as cat                                        # noqa: E402
+import escala                                                 # noqa: E402
 import repos                                                  # noqa: E402
 import tema                                                   # noqa: E402
 
@@ -111,7 +112,7 @@ class Cartao(ttk.Frame):
         titulos = ttk.Frame(topo, style="CartaoLinha.TFrame")
         titulos.pack(side="left", fill="x", expand=True)
         titulo = ttk.Label(titulos, text=app.nome, style="CartaoTitulo.TLabel",
-                           wraplength=self.QUEBRA, justify="left")
+                           wraplength=escala.px(self.QUEBRA), justify="left")
         titulo.pack(anchor="w")
         # 64 = ícone (30) + espaço (10) + recuos do cartão (24)
         self._textos.append((titulo, 64))
@@ -122,13 +123,13 @@ class Cartao(ttk.Frame):
         if app.descricao:
             desc = ttk.Label(self, text=app.descricao,
                              style="CartaoSuave.TLabel",
-                             wraplength=self.QUEBRA, justify="left")
+                             wraplength=escala.px(self.QUEBRA), justify="left")
             desc.pack(anchor="w", pady=(8, 0))
             self._textos.append((desc, 4))
         if app.observacao:
             obs = ttk.Label(self, text="⚠  " + app.observacao,
                             style="CartaoAviso.TLabel",
-                            wraplength=self.QUEBRA, justify="left")
+                            wraplength=escala.px(self.QUEBRA), justify="left")
             obs.pack(anchor="w", pady=(6, 0))
             self._textos.append((obs, 4))
 
@@ -169,7 +170,7 @@ class Cartao(ttk.Frame):
         redesenha o cartão, o que dispara <Configure> de novo — sem a guarda,
         vira um laço.
         """
-        largura = max(evento.width - 28, 180)
+        largura = max(evento.width - escala.px(28), escala.px(180))
         # A guarda é pequena de propósito. Com 10px, a primeira medida (tirada
         # antes de a grade assentar) vinha maior que a definitiva, a diferença
         # ficava abaixo do limite e a correção nunca acontecia — o título do
@@ -178,7 +179,9 @@ class Cartao(ttk.Frame):
             return
         self._quebra_atual = largura
         for rotulo, folga in self._textos:
-            rotulo.configure(wraplength=max(largura - folga, 140))
+            rotulo.configure(
+                wraplength=max(largura - escala.px(folga),
+                               escala.px(140)))
 
     # --------------------------------------------------------------- estado
     def mostrar(self, retrato):
@@ -250,10 +253,13 @@ class Central(tk.Tk):
 
     def __init__(self):
         tk.Tk.__init__(self)
+        # Antes de montar qualquer widget: é esta medida que dá tamanho
+        # a toda fonte daqui para baixo, em notebook com Windows em 125%.
+        escala.medir(self)
         self._identificar_no_windows()
         self.title(TITULO)
-        self.geometry("940x760")
-        self.minsize(700, 520)
+        escala.geometria(self, 940, 760)
+        escala.minimo(self, 700, 520)
 
         self.cfg = cat.carregar_config()
         self.fila = queue.Queue()          # thread de trabalho -> tela
@@ -421,7 +427,8 @@ class Central(tk.Tk):
         """Aviso do topo. Fica escondido enquanto não há o que dizer."""
         self.faixa = ttk.Frame(self, style="Faixa.TFrame", padding=(12, 8))
         self.faixa_texto = ttk.Label(self.faixa, text="", style="Faixa.TLabel",
-                                     wraplength=600, justify="left")
+                                     wraplength=escala.px(600),
+                                     justify="left")
         self.faixa_texto.pack(side="left", fill="x", expand=True)
         self.faixa_botao = ttk.Button(self.faixa, text="", width=22)
         self.faixa_botao.pack(side="right", padx=(8, 0))
@@ -484,7 +491,7 @@ class Central(tk.Tk):
 
         if self.erro_catalogo:
             ttk.Label(self.dentro, text=self.erro_catalogo,
-                      style="Suave.TLabel", wraplength=700,
+                      style="Suave.TLabel", wraplength=escala.px(700),
                       justify="left").pack(anchor="w", pady=20)
             return
 
@@ -503,10 +510,11 @@ class Central(tk.Tk):
         A grade cresce até LARGURA_MAXIMA_GRADE e daí em diante fica centrada:
         maximizar a janela passa a dar MAIS COLUNAS, não cartões mais largos.
         """
-        largura = min(evento.width, self.LARGURA_MAXIMA_GRADE)
+        largura = min(evento.width, escala.px(self.LARGURA_MAXIMA_GRADE))
         self.tela.itemconfigure(self.janela_dentro, width=largura)
         self.tela.coords(self.janela_dentro, max(0, (evento.width - largura) // 2), 0)
-        colunas = max(1, min(self.MAX_COLUNAS, largura // self.LARGURA_CARTAO))
+        colunas = max(1, min(self.MAX_COLUNAS,
+                             largura // escala.px(self.LARGURA_CARTAO)))
         if colunas != getattr(self, "colunas_na_tela", 0):
             self._dispor(colunas)
 
@@ -682,18 +690,19 @@ class Central(tk.Tk):
                          command=lambda: webbrowser.open(app.url_github))
         try:
             menu.tk_popup(cartao.btn["pasta"].winfo_rootx(),
-                          cartao.btn["pasta"].winfo_rooty() + 30)
+                          cartao.btn["pasta"].winfo_rooty()
+                          + escala.px(30))
         finally:
             menu.grab_release()
 
     def ver_novidades(self, nome, retrato):
         janela = tk.Toplevel(self)
         janela.title("O que mudou — %s" % nome)
-        janela.geometry("640x420")
+        escala.geometria(janela, 640, 420)
         janela.transient(self)
         moldura = ttk.Frame(janela, padding=12)
         moldura.pack(fill="both", expand=True)
-        ttk.Label(moldura, wraplength=600, justify="left",
+        ttk.Label(moldura, wraplength=escala.px(600), justify="left",
                   text="Estas são as mudanças que ainda não estão nesta "
                        "máquina, da mais nova para a mais antiga:").pack(
                            anchor="w", pady=(0, 8))
@@ -1039,6 +1048,9 @@ class Central(tk.Tk):
 
 def main():
     sys.excepthook = registrar_erro
+    # Tem de ser antes do tk.Tk(): depois da primeira janela o Windows
+    # não deixa mais o processo se declarar ciente do DPI.
+    escala.preparar()
     Central().mainloop()
 
 
