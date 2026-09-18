@@ -184,13 +184,30 @@ src/app.py         a janela: cartões, menus, thread de trabalho
 src/repos.py       tudo que fala com o git — e só isso fala
 src/catalogo.py    o catálogo e a configuração desta máquina
 src/tema.py        cores e modo escuro (o mesmo dos outros programas)
+src/escala.py      a escala da tela (o mesmo dos outros programas)
 ```
 
-Duas regras que explicam o resto do código:
+Três regras que explicam o resto do código:
 
 **A janela não trava.** Git é rede, e rede demora. Todo git roda numa thread
 de trabalho que devolve o resultado por uma fila; o Tk esvazia essa fila a
 cada 120 ms. É o mesmo mecanismo do Gestor de Licitações.
+
+**A janela acompanha a escala da tela.** Notebook com Windows vem de fábrica em
+125%, e um programa que não se declara ciente do DPI é esticado pelo Windows por
+cima: texto borrado e janela maior do que a que ele pediu. O `src/escala.py`
+declara o processo ciente do DPI antes de a janela existir, acerta o
+`tk scaling` e converte os pixels escritos na mão. É o mesmo arquivo em todos os
+programas do catálogo. Para conferir sem ter um notebook à mão, num monitor
+em 100%:
+
+```
+set CR2_ESCALA=1.25
+central.bat
+```
+
+A janela abre exatamente como abriria num notebook em 125%. Serve qualquer fator
+(1.25, 1.5, 1.75) e vale para todos os programas do catálogo.
 
 **A Central não engole o código das automações.** Cada uma continua sendo o
 repositório dela, com o `.bat` dela, evoluindo sozinha. Juntar tudo num
