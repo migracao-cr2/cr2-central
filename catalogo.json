@@ -31,9 +31,9 @@
     },
     {
       "id": "envio-pdfs-email",
-      "nome": "Envio de PDFs por E-mail",
+      "nome": "Leis e Atos — Planilha e Envio de PDFs",
       "icone": "✉",
-      "descricao": "Padroniza os nomes dos PDFs no padrão Tipo Nnn-aaaa-Sigla (pelo nome do arquivo, pelo texto ou por OCR) e envia tudo para o e-mail da migração em lotes que nunca estouram o limite do Gmail, com a label do colaborador.",
+      "descricao": "Dois programas numa janela só: gera a planilha de Leis e Atos do Portal CR2 a partir dos PDFs (com OCR), organiza os arquivos por entidade e sobe no Google Drive com os links; e envia PDFs para o e-mail da migração em lotes de até 25 MB, com a label do colaborador.",
       "repo": "https://github.com/migracao-cr2/envio-pdfs-email.git",
       "entrada": "Enviar PDFs.bat",
       "tipo": "janela"
