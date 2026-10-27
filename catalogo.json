@@ -82,6 +82,15 @@
       "repo": "https://github.com/migracao-cr2/programa-de-obras.git",
       "entrada": "obras.bat",
       "tipo": "janela"
+    },
+    {
+      "id": "coletor-pareceres",
+      "nome": "Pareceres Prévios",
+      "icone": "📜",
+      "descricao": "Você escolhe o estado e o município; ele baixa do tribunal de contas o parecer prévio das contas da prefeitura e o acórdão das contas da câmara, um PDF por exercício, e gera a planilha-índice com número, data e resultado. Por enquanto: TCE-MS, TCE-SC e TCE-PI.",
+      "repo": "https://github.com/migracao-cr2/coletor-pareceres.git",
+      "entrada": "EXECUTAR.bat",
+      "tipo": "janela"
     }
   ]
 }
