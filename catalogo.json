@@ -39,6 +39,15 @@
       "tipo": "janela"
     },
     {
+      "id": "coletor-tce-pe",
+      "nome": "Licitações e Contratos — TCE-PE",
+      "icone": "🏛",
+      "descricao": "Baixa as licitações, os contratos e os documentos de qualquer prefeitura, câmara ou órgão municipal de Pernambuco pela API de dados abertos do TCE-PE (a partir de 2023), organiza as pastas no padrão do Gestor V4 e gera as planilhas Front e Docs, com revisão e subida no Google Drive.",
+      "repo": "https://github.com/migracao-cr2/coletor-tce-pe.git",
+      "entrada": "EXECUTAR.bat",
+      "tipo": "janela"
+    },
+    {
       "id": "coletor-pncp",
       "nome": "Licitações e Contratos — PNCP",
       "icone": "🏛",
