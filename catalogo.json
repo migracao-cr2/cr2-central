@@ -51,7 +51,7 @@
       "id": "coletor-pncp",
       "nome": "Licitações e Contratos — PNCP",
       "icone": "🏛",
-      "descricao": "Baixa as licitações, os contratos e os termos aditivos de qualquer prefeitura ou câmara do Brasil pelo PNCP (Portal Nacional de Contratações Públicas, Lei 14.133), deduz a situação pelos documentos, organiza as pastas e gera as planilhas do Front e da Docs, com revisão antes de subir no Google Drive. \"Importar dados do Portal CR2\" tira da lista o que já está publicado.",
+      "descricao": "Baixa as licitações, os contratos, os termos aditivos e as atas de registro de preço de qualquer prefeitura ou câmara do Brasil pelo PNCP (Portal Nacional de Contratações Públicas, Lei 14.133), deduz a situação pelos documentos, organiza as pastas e gera as planilhas do Front e da Docs, com revisão antes de subir no Google Drive. \"Importar dados do Portal CR2\" tira da lista o que já está publicado.",
       "repo": "https://github.com/migracao-cr2/coletor-pncp.git",
       "entrada": "EXECUTAR.bat",
       "tipo": "janela"
