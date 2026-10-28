@@ -114,7 +114,7 @@
       "id": "painel-siconfi",
       "nome": "Siconfi — Entregas e Demonstrativos",
       "icone": "📊",
-      "descricao": "Lê a planilha de clientes e mostra, para cada prefeitura e câmara, o que já foi entregue ao Tesouro no Siconfi (RREO, RGF, DCA e MSC) e o que está atrasado pelo prazo legal — para cobrar pendências. Também gera, para um município, os anexos do RREO, do RGF e da DCA em planilha, com os números oficiais.",
+      "descricao": "Você escolhe o estado e o município; ele mostra o que a prefeitura e a câmara já entregaram ao Tesouro no Siconfi (RREO, RGF, DCA e MSC) e o que está atrasado pelo prazo legal — para cobrar pendências. Também gera, para um município, os anexos do RREO, do RGF e da DCA em planilha, com os números oficiais.",
       "repo": "https://github.com/migracao-cr2/painel-siconfi.git",
       "entrada": "EXECUTAR.bat",
       "tipo": "janela"
