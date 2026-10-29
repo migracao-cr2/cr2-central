@@ -48,6 +48,10 @@ import tema                                                   # noqa: E402
 TITULO = "Central de Automações CR2"
 ID_CENTRAL = "__central__"
 
+# Quantas conversas com o GitHub ao mesmo tempo. Medido em 29/10/2026 com 12
+# automações instaladas: uma por vez 30,6 s; 6 juntas 10,4 s; 12 juntas 4,8 s.
+TRABALHADORES = 12
+
 
 # --------------------------------------------------------------------------
 # Registro de erros inesperados
@@ -280,8 +284,16 @@ class Central(tk.Tk):
 
         self._montar()
 
-        self.thread = threading.Thread(target=self._trabalhar, daemon=True)
-        self.thread.start()
+        # Vários trabalhadores ao mesmo tempo: o "Verificar tudo" pergunta ao
+        # GitHub por todas as automações de uma vez, em vez de uma depois da
+        # outra (30,6 s -> 4,8 s). Duas tarefas da MESMA pasta nunca correm juntas (ver
+        # _trava_da_pasta): git em paralelo na mesma pasta briga pelo lock.
+        self._travas = {}
+        self._trava_das_travas = threading.Lock()
+        self.threads = [threading.Thread(target=self._trabalhar, daemon=True)
+                        for _ in range(TRABALHADORES)]
+        for thread in self.threads:
+            thread.start()
         self.after(120, self._drenar_fila)
         self.protocol("WM_DELETE_WINDOW", self._fechar)
 
@@ -416,6 +428,11 @@ class Central(tk.Tk):
                                         width=16,
                                         command=self.verificar_tudo)
         self.btn_verificar.pack(side="right", padx=(0, 8))
+        # Instalar ou atualizar tudo de uma vez, pelo mesmo caminho dos
+        # botões de cada cartão.
+        self.btn_tudo = ttk.Button(faixa, text="Tudo  ▾", width=10,
+                                   command=self.menu_tudo)
+        self.btn_tudo.pack(side="right", padx=(0, 8))
         # A faixa do topo só acende quando existe versão nova da Central.
         # Este botão está sempre aqui: atualizar a própria Central não pode
         # depender de a faixa ter aparecido.
@@ -654,6 +671,89 @@ class Central(tk.Tk):
             acao = "buscar" if repos.e_repo(pasta) else "olhar"
             self._enfileirar(acao, app, texto="verificando...")
         self._status("Perguntando ao GitHub o que há de novo...")
+
+    # ------------------------------------------------- tudo de uma vez
+    def _situacao_de_cada(self):
+        """(a instalar, a atualizar, com arquivo alterado) — pelo que os
+        cartões mostram agora, que é o resultado do último Verificar."""
+        instalar, atualizar, alterados = [], [], []
+        for app in self.apps:
+            cartao = self.cartoes.get(app.id)
+            retrato = cartao.retrato if cartao else {}
+            if not retrato.get("instalado"):
+                instalar.append(app)
+            elif retrato.get("atrasado"):
+                (alterados if retrato.get("sujo") else atualizar).append(app)
+        return instalar, atualizar, alterados
+
+    def menu_tudo(self):
+        """O menu do botão "Tudo": instalar e/ou atualizar todas de uma vez."""
+        instalar, atualizar, alterados = self._situacao_de_cada()
+        c = self.tema.cor
+        menu = tk.Menu(self, tearoff=0, background=c["superficie"],
+                       foreground=c["texto"],
+                       activebackground=c["selecao"],
+                       activeforeground=c["selecao_texto"],
+                       borderwidth=1, relief="solid")
+        n_atualizar = len(atualizar) + len(alterados)
+        menu.add_command(
+            label="Atualizar tudo  (%d)" % n_atualizar,
+            command=lambda: self.fazer_tudo(atualizar=True),
+            state="normal" if n_atualizar else "disabled")
+        menu.add_command(
+            label="Instalar tudo  (%d)" % len(instalar),
+            command=lambda: self.fazer_tudo(instalar=True),
+            state="normal" if instalar else "disabled")
+        menu.add_command(
+            label="Instalar e atualizar tudo",
+            command=lambda: self.fazer_tudo(instalar=True, atualizar=True),
+            state="normal" if (instalar or n_atualizar) else "disabled")
+        menu.add_separator()
+        menu.add_command(label="Verificar tudo de novo",
+                         command=self.verificar_tudo)
+        try:
+            menu.tk_popup(self.btn_tudo.winfo_rootx(),
+                          self.btn_tudo.winfo_rooty() + 30)
+        finally:
+            menu.grab_release()
+
+    def fazer_tudo(self, instalar=False, atualizar=False):
+        """Enfileira tudo de uma vez — os trabalhadores fazem em paralelo.
+
+        Automação com arquivo alterado dentro da pasta NÃO é atualizada em
+        massa: o cartão dela pergunta se pode guardar (git stash), e essa
+        pergunta é por automação. Ela fica listada no fim.
+        """
+        if not repos.disponivel():
+            self._avisar_sem_git()
+            return
+        a_instalar, a_atualizar, alterados = self._situacao_de_cada()
+        feitos = 0
+        if instalar:
+            for app in a_instalar:
+                pasta = cat.pasta_do_app(app, self.cfg)
+                if repos.e_repo(pasta):
+                    # já é um clone (o cartão estava velho): só reler
+                    self._enfileirar("olhar", app)
+                    continue
+                if os.path.isdir(pasta) and os.listdir(pasta):
+                    continue            # pasta ocupada: o cartão explica
+                self._enfileirar("clonar", app, texto="instalando...")
+                feitos += 1
+        if atualizar:
+            for app in a_atualizar:
+                self._enfileirar("atualizar", app, extra=False,
+                                 texto="atualizando...")
+                feitos += 1
+        self._status("%d automação(ões) em andamento, várias ao mesmo tempo..."
+                     % feitos if feitos else "Nada a fazer.")
+        if atualizar and alterados:
+            messagebox.showinfo(
+                TITULO,
+                "Estas automações têm arquivos alterados dentro da pasta e não "
+                "foram atualizadas em massa:\n\n%s\n\nUse o botão Atualizar do "
+                "cartão de cada uma: ele pergunta se pode guardar os arquivos "
+                "antes." % "\n".join("  • " + a.nome for a in alterados))
 
     def _olhar_local(self):
         """Só lê o disco, sem tocar na rede."""
@@ -912,14 +1012,21 @@ class Central(tk.Tk):
             "avisar": avisar,
         })
 
+    def _trava_da_pasta(self, pasta):
+        """A trava de uma pasta: uma tarefa por pasta de cada vez."""
+        chave = os.path.normcase(os.path.abspath(pasta or ""))
+        with self._trava_das_travas:
+            return self._travas.setdefault(chave, threading.Lock())
+
     def _trabalhar(self):
-        """A thread de trabalho. Roda uma tarefa por vez, para sempre."""
+        """Um dos trabalhadores. Roda uma tarefa por vez, para sempre."""
         while True:
             tarefa = self.trabalho.get()
             if tarefa is None:
                 return
             try:
-                self._executar(tarefa)
+                with self._trava_da_pasta(tarefa["pasta"]):
+                    self._executar(tarefa)
             except repos.ErroGit as e:
                 self.fila.put(("erro", tarefa, str(e)))
             except Exception:

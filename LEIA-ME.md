@@ -21,7 +21,21 @@ O cartão avisa sozinho quando há novidade: *"3 novidades no GitHub"*. Em
 **Mais ▾ → Ver o que mudou** aparece a lista do que mudou, escrita nos
 próprios commits.
 
-O botão **Verificar tudo** pergunta ao GitHub de uma vez por todas.
+O botão **Verificar tudo** pergunta ao GitHub por todas **ao mesmo tempo** (até
+12 de uma vez): com 12 automações instaladas, caiu de ~30 s para ~5 s.
+
+O botão **Tudo ▾** faz de uma vez o que os cartões fazem um por um:
+
+| Opção | O que faz |
+|---|---|
+| **Atualizar tudo** | atualiza todas as que têm versão nova |
+| **Instalar tudo** | instala todas as que ainda não estão neste computador |
+| **Instalar e atualizar tudo** | as duas coisas |
+
+O número entre parênteses é quantas há em cada caso, pelo último *Verificar*.
+Automação com **arquivo alterado** dentro da pasta não é atualizada em massa: a
+Central lista quais são, e o botão **Atualizar** do cartão de cada uma pergunta
+se pode guardar os arquivos antes.
 
 ## A Central se atualiza sozinha
 
