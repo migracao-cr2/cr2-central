@@ -3,3 +3,7 @@ __pycache__/
 
 # a configuracao desta maquina (caminhos das pastas, tema escolhido)
 # mora em %LOCALAPPDATA%\CR2\central, nunca aqui.
+
+# saida do GERAR-EXE.bat (o .exe nao vai para o git)
+build/
+dist/

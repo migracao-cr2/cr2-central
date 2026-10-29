@@ -223,6 +223,11 @@ class Cartao(ttk.Frame):
         self._botao("atualizar", mostrar=bool(instalado and atrasado))
         self.btn["atualizar"].configure(
             text="Atualizar" if atrasado <= 1 else "Atualizar (%d)" % atrasado)
+        # O resumo e os filtros da vitrine acompanham o estado dos cartões.
+        # after_idle evita redesenhar a grade uma vez para cada resposta que
+        # chega quase ao mesmo tempo do GitHub.
+        if hasattr(self.central, "_agendar_atualizacao_da_vitrine"):
+            self.central._agendar_atualizacao_da_vitrine()
 
     def trabalhando(self, texto):
         self.ocupado = True
@@ -325,8 +330,11 @@ class Central(tk.Tk):
         todos os tamanhos, porque o arquivo já traz um desenho por tamanho. O
         PNG entra como reserva — é o que funciona fora do Windows.
         """
-        ico = os.path.join(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__))), "logo.ico")
+        if getattr(sys, "frozen", False):
+            ico = os.path.join(getattr(sys, "_MEIPASS", ""), "logo.ico")
+        else:
+            ico = os.path.join(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__))), "logo.ico")
         if os.path.isfile(ico):
             try:
                 self.iconbitmap(default=ico)
@@ -384,6 +392,27 @@ class Central(tk.Tk):
                     foreground=c["alerta"])
         e.configure("Erro.TLabel", background=c["superficie"],
                     foreground=c["erro"])
+        e.configure("Cabecalho.TButton", background=c["cabecalho_fundo"],
+                    foreground=c["cabecalho_texto"],
+                    bordercolor=c["cabecalho_fundo"],
+                    padding=(escala.px(10), escala.px(7)))
+        e.map("Cabecalho.TButton",
+              background=[("active", c["destaque"]),
+                          ("pressed", c["destaque_suave"])],
+              foreground=[("active", c["cabecalho_texto"])])
+        e.configure("Resumo.TLabel", background=c["fundo"],
+                    foreground=c["texto"], font=("Segoe UI", 15, "bold"))
+        e.configure("Filtro.TButton", background=c["fundo"],
+                    foreground=c["texto_suave"], bordercolor=c["borda"],
+                    padding=(escala.px(10), escala.px(6)))
+        e.configure("FiltroAtivo.TButton", background=c["destaque_suave"],
+                    foreground=c["destaque"], bordercolor=c["destaque"],
+                    padding=(escala.px(10), escala.px(6)))
+        e.map("FiltroAtivo.TButton",
+              background=[("active", c["destaque_suave"])])
+        e.configure("Busca.TEntry", fieldbackground=c["superficie"],
+                    foreground=c["texto"], bordercolor=c["borda"],
+                    padding=(escala.px(10), escala.px(7)))
         # A barra de rolagem ganha estilo próprio por dois motivos: no tema.py
         # o polegar e o trilho recebem a mesma cor (fundo), o que deixa o
         # polegar invisível; e o estilo genérico às vezes não repinta ao
@@ -402,7 +431,7 @@ class Central(tk.Tk):
 
     def _montar_cabecalho(self):
         """Faixa da marca: logo (ou o nome), título, modo escuro e o crédito."""
-        faixa = ttk.Frame(self, style="Marca.TFrame", padding=(12, 8))
+        faixa = ttk.Frame(self, style="Marca.TFrame", padding=(16, 10))
         faixa.pack(fill="x")
 
         imagem = self.tema.logo()
@@ -422,21 +451,25 @@ class Central(tk.Tk):
                   font=("Segoe UI", 9)).pack(anchor="w")
 
         self.btn_tema = ttk.Button(faixa, text=self._rotulo_tema(),
-                                   command=self.alternar_tema, width=14)
+                                   style="Cabecalho.TButton",
+                                   command=self.alternar_tema, width=13)
         self.btn_tema.pack(side="right")
         self.btn_verificar = ttk.Button(faixa, text="Verificar tudo",
+                                        style="Cabecalho.TButton",
                                         width=16,
                                         command=self.verificar_tudo)
         self.btn_verificar.pack(side="right", padx=(0, 8))
         # Instalar ou atualizar tudo de uma vez, pelo mesmo caminho dos
         # botões de cada cartão.
         self.btn_tudo = ttk.Button(faixa, text="Tudo  ▾", width=10,
+                                   style="Cabecalho.TButton",
                                    command=self.menu_tudo)
         self.btn_tudo.pack(side="right", padx=(0, 8))
         # A faixa do topo só acende quando existe versão nova da Central.
         # Este botão está sempre aqui: atualizar a própria Central não pode
         # depender de a faixa ter aparecido.
         self.btn_central = ttk.Button(faixa, text="A Central  ▾", width=14,
+                                      style="Cabecalho.TButton",
                                       command=self.menu_da_central)
         self.btn_central.pack(side="right", padx=(0, 8))
 
@@ -485,7 +518,36 @@ class Central(tk.Tk):
 
     def _montar_lista(self):
         """Área rolável com os cartões numa grade que reflui."""
-        moldura = ttk.Frame(self, padding=(12, 10))
+        area = ttk.Frame(self, padding=(16, 12, 16, 0))
+        area.pack(fill="x")
+        self.resumo = tk.StringVar(value="Suas automações")
+        ttk.Label(area, textvariable=self.resumo,
+                  style="Resumo.TLabel").pack(side="left")
+
+        self.busca = tk.StringVar()
+        self.busca.trace_add("write", lambda *_: self._agendar_atualizacao_da_vitrine())
+        campo = ttk.Entry(area, textvariable=self.busca, style="Busca.TEntry",
+                          width=30)
+        campo.pack(side="right", padx=(12, 0))
+        self._placeholder_busca = "Buscar automação..."
+        campo.insert(0, self._placeholder_busca)
+        campo.bind("<FocusIn>", self._busca_foco)
+        campo.bind("<FocusOut>", self._busca_sem_foco)
+
+        filtros = ttk.Frame(self, padding=(16, 8, 16, 4))
+        filtros.pack(fill="x")
+        self.filtro = "todos"
+        self.botoes_filtro = {}
+        for chave, texto in (("todos", "Todos"),
+                             ("instalados", "Instalados"),
+                             ("atualizacoes", "Com atualização")):
+            botao = ttk.Button(filtros, text=texto,
+                               command=lambda c=chave: self._mudar_filtro(c))
+            botao.pack(side="left", padx=(0, 8))
+            self.botoes_filtro[chave] = botao
+        self._repintar_filtros()
+
+        moldura = ttk.Frame(self, padding=(16, 6, 16, 10))
         moldura.pack(fill="both", expand=True)
 
         self.tela = tk.Canvas(moldura, highlightthickness=0, borderwidth=0)
@@ -520,6 +582,58 @@ class Central(tk.Tk):
         self.colunas_na_tela = 0
         self._dispor(colunas=2)
 
+    def _busca_foco(self, evento):
+        if self.busca.get() == self._placeholder_busca:
+            self.busca.set("")
+
+    def _busca_sem_foco(self, evento):
+        if not self.busca.get().strip():
+            self.busca.set(self._placeholder_busca)
+
+    def _mudar_filtro(self, filtro):
+        self.filtro = filtro
+        self._repintar_filtros()
+        self._atualizar_vitrine()
+
+    def _repintar_filtros(self):
+        for chave, botao in self.botoes_filtro.items():
+            botao.configure(style=("FiltroAtivo.TButton" if chave == self.filtro
+                                   else "Filtro.TButton"))
+
+    def _agendar_atualizacao_da_vitrine(self):
+        if getattr(self, "_vitrine_agendada", False):
+            return
+        self._vitrine_agendada = True
+        self.after_idle(self._atualizar_vitrine)
+
+    def _cartao_visivel(self, cartao):
+        texto = self.busca.get().strip().casefold()
+        if texto == self._placeholder_busca.casefold():
+            texto = ""
+        app = cartao.app
+        if texto and texto not in (app.nome + " " + app.descricao).casefold():
+            return False
+        instalado = bool(cartao.retrato.get("instalado"))
+        if self.filtro == "instalados" and not instalado:
+            return False
+        if self.filtro == "atualizacoes" and not cartao.retrato.get("atrasado", 0):
+            return False
+        return True
+
+    def _atualizar_vitrine(self):
+        self._vitrine_agendada = False
+        instalados = sum(bool(c.retrato.get("instalado"))
+                         for c in self.cartoes.values())
+        atualizacoes = sum(bool(c.retrato.get("atrasado", 0))
+                           for c in self.cartoes.values())
+        total = len(self.cartoes)
+        complemento = "%d instaladas" % instalados
+        if atualizacoes:
+            complemento += "  •  %d para atualizar" % atualizacoes
+        self.resumo.set("Suas automações  ·  %d no catálogo  •  %s"
+                        % (total, complemento))
+        self._dispor(getattr(self, "colunas_na_tela", 2) or 2)
+
     def _largura_mudou(self, evento):
         """A janela mudou de tamanho: refaz a grade se o número de colunas mudou.
 
@@ -543,7 +657,8 @@ class Central(tk.Tk):
         # zera pesos antigos antes de redistribuir
         for i in range(self.MAX_COLUNAS):
             self.dentro.columnconfigure(i, weight=0, uniform="")
-        for i, cartao in enumerate(self.cartoes.values()):
+        visiveis = [c for c in self.cartoes.values() if self._cartao_visivel(c)]
+        for i, cartao in enumerate(visiveis):
             cartao.grid(row=i // colunas, column=i % colunas,
                         sticky="nsew", padx=(0, 10), pady=(0, 10))
         # uniform faz as colunas terem exatamente a mesma largura; sem isso,
@@ -621,7 +736,7 @@ class Central(tk.Tk):
     def abrir(self, app):
         pasta = cat.pasta_do_app(app, self.cfg)
         dir_programa = app.pasta_do_programa(pasta)
-        entrada = os.path.join(dir_programa, app.entrada)
+        entrada = app.entrada_preferida(pasta)
         if not os.path.exists(entrada):
             messagebox.showerror(
                 TITULO,

@@ -19,14 +19,42 @@ import json
 import os
 import sys
 
-PASTA_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# No executável empacotado, a pasta da Central continua sendo a pasta do
+# .exe (um clone git normal). Os recursos internos do PyInstaller ficam em
+# _MEIPASS e entram apenas como reserva para a primeira abertura.
+if getattr(sys, "frozen", False):
+    _PASTA_EXE = os.path.dirname(os.path.abspath(sys.executable))
+    # Durante o desenvolvimento o spec grava em dist/. Na instalação final
+    # o executável pode ficar na raiz. Nos dois casos, preserve o clone git
+    # como "pasta da Central" para que a autoatualização continue funcionando.
+    _PASTA_PAI = os.path.dirname(_PASTA_EXE)
+    PASTA_BASE = (_PASTA_PAI if os.path.isdir(os.path.join(_PASTA_PAI, ".git"))
+                  else _PASTA_EXE)
+    _PASTA_RECURSOS = getattr(sys, "_MEIPASS", _PASTA_EXE)
+else:
+    PASTA_BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _PASTA_RECURSOS = PASTA_BASE
+
 ARQ_CATALOGO = os.path.join(PASTA_BASE, "catalogo.json")
+if not os.path.isfile(ARQ_CATALOGO):
+    ARQ_CATALOGO = os.path.join(_PASTA_RECURSOS, "catalogo.json")
+
+
+def _raiz_cr2():
+    """Onde moram a configuração e os apps: %LOCALAPPDATA%\\CR2.
+
+    CR2_RAIZ troca a raiz inteira. É o que deixa uma Central de TESTE rodar
+    ao lado da de verdade sem tocar na configuração nem nos clones dela.
+    """
+    if os.environ.get("CR2_RAIZ"):
+        return os.environ["CR2_RAIZ"]
+    raiz = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    return os.path.join(raiz, "CR2")
 
 
 def _pasta_config():
     """%LOCALAPPDATA%\\CR2\\central — com plano B fora do Windows."""
-    raiz = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    return os.path.join(raiz, "CR2", "central")
+    return os.path.join(_raiz_cr2(), "central")
 
 
 ARQ_CONFIG = os.path.join(_pasta_config(), "config.json")
@@ -34,8 +62,7 @@ ARQ_LOG = os.path.join(_pasta_config(), "erros.log")
 
 
 def pasta_apps_padrao():
-    raiz = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    return os.path.join(raiz, "CR2", "apps")
+    return os.path.join(_raiz_cr2(), "apps")
 
 
 # --------------------------------------------------------------------------
@@ -50,6 +77,7 @@ class App(object):
         self.descricao = bruto.get("descricao", "")
         self.repo = bruto.get("repo", "")
         self.entrada = bruto.get("entrada", "")
+        self.executavel = bruto.get("executavel", "")
         self.tipo = bruto.get("tipo", "janela")      # janela | terminal
         self.subpasta = bruto.get("subpasta", "")
         self.observacao = bruto.get("observacao", "")
@@ -72,6 +100,15 @@ class App(object):
         if self.subpasta:
             return os.path.join(pasta_clone, *self.subpasta.split("/"))
         return pasta_clone
+
+    def entrada_preferida(self, pasta_clone):
+        """Usa o executavel desktop quando existe; senao preserva a entrada antiga."""
+        programa = self.pasta_do_programa(pasta_clone)
+        if self.executavel:
+            candidato = os.path.join(programa, *self.executavel.split("/"))
+            if os.path.isfile(candidato):
+                return candidato
+        return os.path.join(programa, self.entrada)
 
 
 def carregar_catalogo(caminho=None):

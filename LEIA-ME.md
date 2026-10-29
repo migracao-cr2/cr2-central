@@ -5,6 +5,16 @@ atualiza cada uma direto do GitHub — sem baixar `.rar`, sem copiar pasta.
 
 **Abrir:** dois cliques em `central.bat`.
 
+A janela é em Qt (`src/app_qt.py`, precisa do PySide6). Se o PySide6 não estiver
+instalado no computador, o `central.bat` abre a mesma Central em Tkinter
+(`src/app.py`): ela nunca deixa de abrir por falta de biblioteca. O PySide6
+chega sozinho na primeira vez que a pessoa abre um programa do catálogo que
+usa Qt, porque o `.bat` dele instala as dependências.
+
+O `GERAR-EXE.bat` gera um `dist\Central CR2.exe`, que fica **fora do git** e
+**não é usado pelo `central.bat`**: o `.exe` é uma cópia congelada, e o
+"Atualizar a Central" atualiza o código do git, não o `.exe`.
+
 ---
 
 ## O que ela faz
@@ -36,6 +46,33 @@ O número entre parênteses é quantas há em cada caso, pelo último *Verificar
 Automação com **arquivo alterado** dentro da pasta não é atualizada em massa: a
 Central lista quais são, e o botão **Atualizar** do cartão de cada uma pergunta
 se pode guardar os arquivos antes.
+
+## Tela única: os programas abrem dentro da Central
+
+Com a janela Qt, **Abrir** encaixa o programa dentro da Central. Cada programa
+continua sendo um processo próprio (um travar não derruba os outros nem a
+Central); só a janela dele aparece aqui.
+
+- **← Menu**, no cabeçalho do próprio programa, volta aos cartões. O programa
+  **continua rodando**: o cartão dele mostra o andamento (barra e porcentagem,
+  lidas da barra de progresso do programa) e o botão vira **Ir para o
+  programa**. *Mais ▾ → Fechar o programa* fecha.
+- **Sem janela de comandos:** o `.bat` do programa roda escondido. Se ele
+  falhar ao abrir, a Central mostra as últimas linhas que ele escreveu e
+  oferece abrir do jeito antigo, com a janela de comandos, para ver o erro.
+- **Um tema só:** os programas abrem no tema da Central e acompanham quando
+  ele muda — inclusive pelo botão de tema de dentro de um programa.
+- **Ao fechar a Central** com programas abertos: *Fechar tudo* (quem está
+  trabalhando pergunta antes), *Deixar abertos* (cada um vira janela própria,
+  do tamanho da Central, e continua) ou *Cancelar*.
+- **Notebook:** em tela baixa o `tema_qt.py` entra em modo compacto (cabeçalho
+  fino, campos menores); `CR2_COMPACTO=1` força, para testar.
+
+O lado do programa disso tudo está no `tema_qt.py` (classe `Central`): o
+programa não precisa fazer nada além de usar o `tq.Cabecalho`.
+
+`CR2_RAIZ` troca a pasta de configuração e de apps (`%LOCALAPPDATA%\CR2`): serve
+para rodar uma Central de teste ao lado da de verdade sem tocar em nada dela.
 
 ## A Central se atualiza sozinha
 
@@ -194,18 +231,22 @@ O campo **`icone`** é opcional: é o emoji que a Central desenha no cartão daq
 INSTALAR.bat       instala tudo numa maquina nova
 central.bat        abre a janela
 catalogo.json      QUAIS automações existem (vem do GitHub, é versionado)
-src/app.py         a janela: cartões, menus, thread de trabalho
+src/app_qt.py      a janela (Qt): cartões, menus, threads de trabalho
+src/app.py         a mesma janela em Tkinter, para quem não tem o PySide6
 src/repos.py       tudo que fala com o git — e só isso fala
 src/catalogo.py    o catálogo e a configuração desta máquina
 src/tema.py        cores e modo escuro (o mesmo dos outros programas)
+src/tema_qt.py     o visual Qt — a CÓPIA CANÔNICA, copiada igual para cada programa
 src/escala.py      a escala da tela (o mesmo dos outros programas)
 ```
 
 Três regras que explicam o resto do código:
 
-**A janela não trava.** Git é rede, e rede demora. Todo git roda numa thread
-de trabalho que devolve o resultado por uma fila; o Tk esvazia essa fila a
-cada 120 ms. É o mesmo mecanismo do Gestor de Licitações.
+**A janela não trava.** Git é rede, e rede demora. Todo git roda em threads
+de trabalho, com uma trava por pasta. Elas devolvem o resultado por um sinal Qt
+(no `app.py`, por uma fila que o Tk esvazia a cada 120 ms), e só a thread da
+janela toca a tela. As threads são daemon: fechar a janela no meio de um
+*Verificar tudo* encerra o programa na hora.
 
 **A janela acompanha a escala da tela.** Notebook com Windows vem de fábrica em
 125%, e um programa que não se declara ciente do DPI é esticado pelo Windows por
@@ -227,6 +268,22 @@ A janela abre exatamente como abriria num notebook em 125%. Serve qualquer fator
 repositório dela, com o `.bat` dela, evoluindo sozinha. Juntar tudo num
 programa só misturaria dependências (Selenium, Tesseract, Pillow) e quebraria
 caminhos que hoje funcionam.
+
+## O visual Qt de todos os programas
+
+`src/tema_qt.py` é o visual dos programas em Qt: cores claro/escuro, folha de
+estilo, cabeçalho escuro com a marca, faixa de aviso, painel, campo com
+rótulo, a seta das caixas de seleção e a `Tarefa` (trabalho numa thread
+daemon, com sinais seguros de volta para a janela). Ele não sabe nada de
+licitação, emenda ou PDF.
+
+**Esta é a cópia canônica.** Cada programa do catálogo leva uma cópia igual,
+do mesmo jeito que já leva o `escala.py`. Mudou aqui, copie para os outros; não
+edite a cópia de um programa só, senão os visuais voltam a divergir. Regra
+que só um programa usa vai no `extra` de `tema_qt.estilo(modo, extra)`.
+
+Todo programa com janela Qt mantém a janela Tk como reserva: sem o PySide6,
+o `.bat` abre a Tk, e o programa nunca deixa de abrir por falta de biblioteca.
 
 ## Quando algo dá errado
 

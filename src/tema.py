@@ -20,6 +20,7 @@ arquivo, aparece o nome "CR2" escrito, e o programa funciona igual.
 """
 
 import os
+import sys
 import tkinter as tk
 from tkinter import ttk
 
@@ -27,6 +28,9 @@ import escala
 
 PASTA_BASE = os.path.dirname(os.path.abspath(__file__))
 ARQ_LOGO = os.path.join(PASTA_BASE, "logo.png")
+if getattr(sys, "frozen", False):
+    ARQ_LOGO = os.path.join(getattr(sys, "_MEIPASS", PASTA_BASE),
+                            "src", "logo.png")
 
 ASSINATURA = "Desenvolvido por Mauricio"
 

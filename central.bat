@@ -4,9 +4,15 @@ rem  Central de Automacoes CR2
 rem
 rem  Dois cliques aqui abre a janela.
 rem
-rem  A Central so precisa do Python com Tkinter - nada de pip.
-rem  Quem instala dependencia e o .bat de cada automacao, na
-rem  primeira vez que ela e aberta.
+rem  A janela nova e em Qt (src\app_qt.py, precisa do PySide6).
+rem  Sem o PySide6, abre a janela em Tkinter (src\app.py), que
+rem  faz exatamente o mesmo - a Central nunca deixa de abrir por
+rem  falta de biblioteca. O PySide6 chega sozinho quando a pessoa
+rem  abre um programa do catalogo que usa Qt (o .bat dele instala).
+rem
+rem  Nao usamos o dist\Central CR2.exe aqui de proposito: o .exe e
+rem  uma copia congelada, e o "Atualizar a Central" atualiza o
+rem  codigo do git, nao o .exe - ele continuaria na versao velha.
 rem
 rem  Este arquivo precisa ficar em ASCII com quebra CRLF:
 rem  o cmd.exe nao le .bat com quebra de linha LF.
@@ -24,12 +30,18 @@ if not defined PY (
 )
 if not defined PY goto :sem_python
 
-%PY% -c "import tkinter" >nul 2>&1
-if errorlevel 1 goto :sem_tk
-
 rem `pyw` abre sem o console preto atras da janela
 set "PYW=%PY%"
 where pyw >nul 2>&1 && set "PYW=pyw -3"
+
+%PY% -c "import PySide6" >nul 2>&1
+if not errorlevel 1 (
+    start "" %PYW% "src\app_qt.py" %*
+    exit /b 0
+)
+
+%PY% -c "import tkinter" >nul 2>&1
+if errorlevel 1 goto :sem_tk
 start "" %PYW% "src\app.py" %*
 exit /b 0
 
